@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            client/package-lock.json
+            server/package-lock.json
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci
+
+      - name: Typecheck client
+        working-directory: client
+        run: npx tsc -p tsconfig.json --noEmit
+
+      - name: Build client
+        working-directory: client
+        run: npm run build
+
+      - name: Install server deps
+        working-directory: server
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: server
+        run: npx prisma generate
+        env:
+          # Prisma reads schema without connecting; this avoids missing env failures.
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db?schema=public
+          JWT_SECRET: ci-secret
+

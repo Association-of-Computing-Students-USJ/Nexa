@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+/* App-wide base styling conventions */
+:root {
+  color-scheme: dark;
+  --brand: #19D1E6;
+  --brand-dark: #011c40;
+  --brand-soft: rgba(25, 209, 230, 0.2);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24;
+}
+
+.glass-nav {
+  background: rgba(14, 14, 14, 0.85);
+  backdrop-filter: blur(24px);
+}
+
+.glass-panel {
+  background: rgba(19, 19, 19, 0.7);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.gradient-orb {
+  background: radial-gradient(circle, var(--brand-soft) 0%, rgba(14, 14, 14, 0) 70%);
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 100%);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::selection {
+  background-color: var(--brand);
+  color: #ffffff;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  display: flex;
+  width: fit-content;
+  animation: marquee 30s linear infinite;
+}
+
+/* Scroll reveal primitives (no external lib) */
+.reveal-base {
+  will-change: transform, opacity, filter;
+  transition:
+    transform 700ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 700ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    filter 700ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.reveal-fade {
+  opacity: 0;
+  filter: blur(6px);
+}
+.reveal-up {
+  opacity: 0;
+  transform: translateY(18px);
+  filter: blur(6px);
+}
+.reveal-left {
+  opacity: 0;
+  transform: translateX(-18px);
+  filter: blur(6px);
+}
+.reveal-right {
+  opacity: 0;
+  transform: translateX(18px);
+  filter: blur(6px);
+}
+.reveal-show {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  filter: blur(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal-base {
+    transition: none;
+  }
+  .reveal-fade,
+  .reveal-up,
+  .reveal-left,
+  .reveal-right {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
