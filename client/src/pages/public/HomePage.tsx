@@ -6,7 +6,7 @@ import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
 import hashanImage from "../../assets/images/committee/hashan.jpeg";
 import niluniImage from "../../assets/images/committee/niluni.jpeg";
 import vikumImage from "../../assets/images/committee/vikum.jpeg";
-import banulaImage from "../../assets/images/committee/banula.png";
+import banulaImage from "../../assets/images/committee/banula.jpeg";
 import poornaImage from "../../assets/images/committee/poorna.jpeg";
 import praveenImage from "../../assets/images/committee/praveen.jpeg";
 import thiranImage from "../../assets/images/committee/thiran.jpeg";
