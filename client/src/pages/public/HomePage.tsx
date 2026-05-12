@@ -10,7 +10,7 @@ import banulaImage from "../../assets/images/committee/sample.png";
 import poornaImage from "../../assets/images/committee/poorna.jpeg";
 import praveenImage from "../../assets/images/committee/praveen.jpeg";
 import thiranImage from "../../assets/images/committee/thiran.jpeg";
-import rumethImage from "../../assets/images/committee/sample.png";
+import rumethImage from "../../assets/images/committee/rumeeth.png";
 import usjpLogo from "../../assets/images/logo/usjp.png";
 import acsLogo from "../../assets/images/logo/ACS.png";
 
