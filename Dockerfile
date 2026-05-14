@@ -3,10 +3,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy client source
-COPY client/package*.json client/tsconfig.json client/vite.config.ts ./client/
-COPY client/src ./client/src
-COPY client/index.html ./client/
+# Copy entire client directory (excluding node_modules and dist via .dockerignore)
+COPY client/ ./client/
 
 # Install dependencies and build
 WORKDIR /app/client
