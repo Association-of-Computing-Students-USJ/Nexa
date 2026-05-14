@@ -1,0 +1,9 @@
+{
+  "name": "nexa-root-deploy",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build",
+    "start": "node server.js"
+  }
+}
