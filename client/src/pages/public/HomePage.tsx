@@ -1,471 +1,684 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Reveal from "../../components/Reveal";
 import EventSessions from "../../components/EventSessions";
+import CustomCursor from "../../components/CustomCursor";
+import { useSmoothScroll } from "../../hooks/useSmoothScroll";
+import { useCountUp } from "../../hooks/useCountUp";
 import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
-import hashanImage from "../../assets/images/committee/hashan.jpeg";
-import niluniImage from "../../assets/images/committee/niluni.jpeg";
-import vikumImage from "../../assets/images/committee/vikum.jpeg";
-import banulaImage from "../../assets/images/committee/banula.jpeg";
-import poornaImage from "../../assets/images/committee/poorna.jpeg";
-import praveenImage from "../../assets/images/committee/praveen.jpeg";
-import thiranImage from "../../assets/images/committee/thiran.jpeg";
+import heroImage from "../../assets/images/logo/hero.png";
+import hashanImage from "../../assets/images/committee/hashan.png";
+import niluniImage from "../../assets/images/committee/niluni.png";
+import vikumImage from "../../assets/images/committee/vikum.png";
+import banulaImage from "../../assets/images/committee/banula.png";
+import poornaImage from "../../assets/images/committee/poorna.png";
+import praveenImage from "../../assets/images/committee/praveen.png";
+import thiranImage from "../../assets/images/committee/thiran.png";
 import rumethImage from "../../assets/images/committee/rumeeth.png";
 import usjpLogo from "../../assets/images/logo/usjp.png";
 import acsLogo from "../../assets/images/logo/ACS.png";
 
-const MOBILE_NAV_ITEMS = [
-  { href: "#about", label: "About" },
-  { href: "#sessions", label: "Sessions" },
-  { href: "#sponsors", label: "Sponsors" },
-  { href: "#contact", label: "Contact" }
+/* ─── Data ───────────────────────────────────────────────── */
+
+const NAV_LINKS = [
+  { href: "#about",    label: "About",    section: "about"    },
+  { href: "#sessions", label: "Sessions", section: "sessions" },
+  { href: "#contact",  label: "Committee", section: "contact"  },
 ];
 
-const SPONSORSHIP_PACKAGES = [
-  { tier: "Title Sponsor", amount: "100,000 LKR", color: "border-[var(--brand)] text-[var(--brand)]" },
-  { tier: "Platinum Sponsor", amount: "75,000 LKR", color: "border-gray-200 text-gray-200" },
-  { tier: "Gold Sponsor", amount: "50,000 LKR", color: "border-yellow-500 text-yellow-500" },
-  { tier: "Silver Sponsor", amount: "30,000 LKR", color: "border-gray-400 text-gray-400" },
-  { tier: "Bronze Sponsor", amount: "25,000 LKR", color: "border-orange-400 text-orange-400" }
+const ABOUT_FEATURES = [
+  {
+    icon: "target",
+    title: "Focused Tech Talks",
+    desc: "Deep-dive sessions delivering actionable industry insights you can apply immediately.",
+  },
+  {
+    icon: "lightbulb",
+    title: "Innovation & Networking",
+    desc: "Connect with professionals and discover emerging technologies shaping tech in Sri Lanka.",
+  },
+  {
+    icon: "rocket_launch",
+    title: "Career Growth",
+    desc: "Unlock real-world career pathways bridging your academic journey with the industry.",
+  },
 ];
 
-const PARTNERSHIP_ROLES = [
-  "Official Food and Beverage Partner",
-  "Official Printing Partner",
-  "Official Photography and Videography Partner",
-  "Official Gift Partner",
-  "Official Technical Partner",
-  "Official Media Partner"
-];
 
-const CONTACTS = [
-  { name: "Hashan Hirantha", role: "Chairperson", phone: "070 566 5091", image: hashanImage },
-  { name: "Niluni Sandunika", role: "Secretary", phone: "076 776 0746", image: niluniImage },
-  { name: "Vikum Deshan ", role: "Design Team Head", phone: "070 210 6391", image: vikumImage },
-  { name: "Banula Bimsara", role: "Technical Team Head", phone: "070 210 6391", image: banulaImage },
-  { name: "Poorna Sachinthana", role: "Finance Head", phone: "070 210 6391", image: poornaImage },
+const COMMITTEE = [
+  { name: "Hashan Hirantha",     role: "Chairperson",           phone: "070 566 5091", image: hashanImage  },
+  { name: "Niluni Sandunika",    role: "Secretary",             phone: "076 776 0746", image: niluniImage  },
+  { name: "Vikum Deshan",        role: "Design Team Head",      phone: "070 210 6391", image: vikumImage   },
+  { name: "Banula Bimsara",      role: "Technical Team Head",   phone: "070 210 6391", image: banulaImage  },
+  { name: "Poorna Sachinthana",  role: "Finance Head",          phone: "070 210 6391", image: poornaImage  },
   { name: "Praveen Seneviratne", role: "Programming Team Head", phone: "070 210 6391", image: praveenImage },
-  { name: "Thiran Ranathunga", role: "Marketing Team Head", phone: "070 210 6391", image: thiranImage },
-  { name: "Rumeth Sathnidu", role: "HR & Logistics Team Head", phone: "070 210 6391", image: rumethImage }
+  { name: "Thiran Ranathunga",   role: "Marketing Team Head",   phone: "070 210 6391", image: thiranImage  },
+  { name: "Rumeth Sathnidu",     role: "HR & Logistics Head",   phone: "070 210 6391", image: rumethImage  },
 ];
 
+/* ─── Image Slot ─────────────────────────────────────────────
+   Replace the `src` prop with your actual image path.
+   When src is provided it renders a plain <img>.
+   When src is omitted it renders a labeled placeholder.
+   ─────────────────────────────────────────────────────────── */
+function ImgSlot({
+  src,
+  alt,
+  label,
+  className = "",
+  dark = false,
+}: {
+  src?: string;
+  alt?: string;
+  label: string;
+  className?: string;
+  dark?: boolean;
+}) {
+  if (src) {
+    return <img src={src} alt={alt ?? label} className={`w-full h-full object-cover ${className}`} />;
+  }
+  return (
+    <div className={`img-slot relative flex flex-col items-center justify-center gap-3 rounded-2xl overflow-hidden ${className} ${dark ? "bg-[#1a1a1a]" : "bg-gray-100"}`}>
+      <div className={`absolute inset-3 rounded-xl border-2 border-dashed pointer-events-none ${dark ? "border-[#303030]" : "border-gray-300"}`} />
+      <span className={`material-symbols-outlined text-5xl relative z-10 ${dark ? "text-[#3a3a3a]" : "text-gray-300"}`}>add_photo_alternate</span>
+      <span className={`relative z-10 font-mono text-xs px-3 py-1.5 rounded-full tracking-wider ${dark ? "bg-[#252525] text-[#555]" : "bg-gray-200 text-gray-400"}`}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Animated stat number ───────────────────────────────── */
+function AnimatedStat({ value, label, light = false }: { value: string | number; label: string; light?: boolean }) {
+  const { ref, display } = useCountUp(value);
+  return (
+    <div>
+      <span ref={ref as React.RefObject<HTMLSpanElement>}
+        className="text-4xl font-bold text-[#19D1E6]">{display}</span>
+      <p className={`text-sm mt-1 ${light ? "text-gray-500" : "text-[#888888]"}`}>{label}</p>
+    </div>
+  );
+}
+
+/* ─── Scroll progress bar ────────────────────────────────── */
+function ScrollProgress() {
+  const [pct, setPct] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight;
+      setPct(h > 0 ? (window.scrollY / h) * 100 : 0);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <div
+      className="fixed top-0 left-0 z-[10003] h-[2px] bg-[#19D1E6] transition-[width] duration-75 will-change-[width]"
+      style={{ width: `${pct}%` }}
+    />
+  );
+}
+
+/* ─── Component ──────────────────────────────────────────── */
 export default function HomePage() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuOpen, setMenuOpen]    = useState(false);
+  const [scrolled, setScrolled]    = useState(false);
+  const [activeSection, setActive] = useState("");
+
+  const orb1Ref = useRef<HTMLImageElement>(null);
+
+  useSmoothScroll();
 
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    const onScroll = () => setScrolled(window.scrollY > 80);
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    const ids = NAV_LINKS.map(l => l.section);
+    const observers = ids.map(id => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      const obs = new IntersectionObserver(
+        ([e]) => { if (e.isIntersecting) setActive(id); },
+        { rootMargin: "-40% 0px -55% 0px" }
+      );
+      obs.observe(el);
+      return obs;
+    });
+
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    window.addEventListener("keydown", onKey);
+
+    const onParallax = () => {
+      const y = window.scrollY;
+      // Parallax on the hero background image
+      if (orb1Ref.current) orb1Ref.current.style.transform = `scale(1.08) translateY(${y * 0.22}px)`;
+    };
+    window.addEventListener("scroll", onParallax, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("scroll", onParallax);
+      observers.forEach(o => o?.disconnect());
+    };
   }, []);
 
   return (
     <div id="top" className="w-full min-w-0">
-      {/* TopNavBar */}
-      <nav className="fixed top-0 z-50 w-full border-b border-white/5 glass-nav ps-[env(safe-area-inset-left,0px)] pe-[env(safe-area-inset-right,0px)]">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-4 sm:px-6 md:px-8 lg:px-12 md:py-6">
-          <a href="#top" className="flex items-center gap-3">
-            <img src={nexaLogo} alt="NEXA logo" className="h-8 w-8 object-contain sm:h-10 sm:w-10" />
-            <div className="font-headline text-xl font-black tracking-tighter text-white uppercase sm:text-2xl">NEXA</div>
-          </a>
-          <div className="hidden gap-10 md:flex">
-            <a
-              className="font-headline text-xs font-bold uppercase tracking-tighter text-[var(--brand)] border-b-2 border-[var(--brand)] pb-1 transition-all duration-300"
-              href="#about"
-            >
-              About
-            </a>
-            <a
-              className="font-headline text-xs font-bold uppercase tracking-tighter text-[#e2e2e2] opacity-60 hover:opacity-100 hover:text-[var(--brand)] transition-all duration-300"
-              href="#sessions"
-            >
-              Sessions
-            </a>
-            <a
-              className="font-headline text-xs font-bold uppercase tracking-tighter text-[#e2e2e2] opacity-60 hover:opacity-100 hover:text-[var(--brand)] transition-all duration-300"
-              href="#sponsors"
-            >
-              Sponsors
-            </a>
-            <a
-              className="font-headline text-xs font-bold uppercase tracking-tighter text-[#e2e2e2] opacity-60 hover:opacity-100 hover:text-[var(--brand)] transition-all duration-300"
-              href="#contact"
-            >
-              Contact
-            </a>
-          </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/register"
-              className="hidden bg-[var(--brand)] text-white font-headline text-xs font-bold uppercase tracking-widest px-6 py-2.5 hover:brightness-110 transition-all sm:inline-block"
-            >
-              Register Now
-            </Link>
+      <CustomCursor />
+      <ScrollProgress />
+      <div className="noise-overlay" />
 
-            <button
-              type="button"
-              className="md:hidden inline-flex h-10 w-10 items-center justify-center border border-white/10 bg-white/5 text-white hover:bg-white/10 transition-colors"
-              aria-label="Open menu"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              <span className="material-symbols-outlined">menu</span>
+      {/* ── Navbar ─────────────────────────────────────────── */}
+      {/* Light navbar — reads clearly over all section types */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-400 ${
+        scrolled
+          ? "bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100"
+          : "bg-white/90 backdrop-blur-md border-b border-gray-100"
+      }`}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="flex items-center justify-between h-18 py-4">
+            <a href="#top" className="flex items-center gap-2.5" data-cursor="Home">
+              <img src={nexaLogo} alt="NEXA" className="h-8 w-8 object-contain" />
+              <span className="text-xl font-bold tracking-tight text-[#19D1E6]">NEXA</span>
+            </a>
+
+            <div className="hidden md:flex items-center gap-8">
+              {NAV_LINKS.map(l => (
+                <a key={l.href} href={l.href} data-cursor="View"
+                  className={`text-sm font-medium transition-colors duration-300 relative group ${
+                    activeSection === l.section
+                      ? "text-[#19D1E6]"
+                      : "text-gray-600 hover:text-[#19D1E6]"
+                  }`}>
+                  {l.label}
+                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-[#19D1E6] transition-all duration-300 ${
+                    activeSection === l.section ? "w-full" : "w-0 group-hover:w-full"
+                  }`} />
+                </a>
+              ))}
+              <Link to="/register" data-cursor="Register"
+                className="px-6 py-2.5 bg-[#19D1E6] text-[#0e0e0e] font-semibold text-sm rounded-full hover:bg-[#19D1E6]/90 transition-all duration-300 hover:scale-105 glow">
+                Register Now
+              </Link>
+            </div>
+
+            <button type="button"
+              className="md:hidden p-2 text-gray-700 hover:text-[#19D1E6] transition-colors"
+              aria-label="Toggle menu"
+              onClick={() => setMenuOpen(v => !v)}>
+              <span className="material-symbols-outlined">{menuOpen ? "close" : "menu"}</span>
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Mobile menu */}
-      {menuOpen ? (
-        <div className="fixed inset-0 z-[60] md:hidden" role="dialog" aria-modal="true">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60"
-            aria-label="Close menu"
-            onClick={() => setMenuOpen(false)}
-          />
-          <div className="glass-panel absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] w-[min(92vw,360px)] p-4">
-            <div className="flex items-center justify-between">
-              <div className="font-headline text-sm font-bold uppercase tracking-widest text-white/80">Navigation</div>
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 items-center justify-center border border-white/10 bg-white/5 text-white hover:bg-white/10 transition-colors"
-                aria-label="Close"
-                onClick={() => setMenuOpen(false)}
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="mt-4 grid gap-2">
-              {MOBILE_NAV_ITEMS.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setMenuOpen(false)}
-                  className="rounded-md border border-white/10 bg-white/5 px-3 py-2 font-headline text-xs font-bold uppercase tracking-widest text-white/80 hover:bg-white/10"
-                >
-                  {item.label}
-                </a>
-              ))}
-
-              <Link
-                to="/register"
-                onClick={() => setMenuOpen(false)}
-                className="mt-2 bg-[var(--brand)] px-4 py-3 text-center font-headline text-xs font-bold uppercase tracking-widest text-white hover:brightness-110 transition-all"
-              >
-                Register Now
-              </Link>
-            </div>
-          </div>
+      {/* ── Mobile menu ────────────────────────────────────── */}
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 bg-white flex flex-col items-center justify-center gap-8 md:hidden">
+          {NAV_LINKS.map((l, i) => (
+            <Reveal key={l.href} variant="fade-up" delayMs={i * 60}>
+              <a href={l.href} onClick={() => setMenuOpen(false)}
+                className="text-3xl font-semibold text-gray-900 hover:text-[#19D1E6] transition-colors">
+                {l.label}
+              </a>
+            </Reveal>
+          ))}
+          <Reveal variant="fade-up" delayMs={NAV_LINKS.length * 60}>
+            <Link to="/register" onClick={() => setMenuOpen(false)}
+              className="px-8 py-3 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-full text-lg glow">
+              Register Now
+            </Link>
+          </Reveal>
         </div>
-      ) : null}
+      )}
 
       <main>
-        {/* Hero Section */}
-        <section className="relative flex min-h-[92svh] flex-col items-center justify-center overflow-hidden bg-[#0e0e0e] px-5 pt-24 sm:px-6 md:px-8 lg:px-12 md:pt-28">
-          <div className="pointer-events-none absolute inset-0 opacity-10">
-            <div className="absolute left-0 top-0 h-full w-full bg-[radial-gradient(circle_at_center,_var(--brand-soft)_0%,_transparent_70%)]" />
-            <div className="absolute inset-0 overflow-hidden">
-              <div
-                className="h-full w-full opacity-5 grayscale"
-                style={{
-                  backgroundImage:
-                    "url('https://lh3.googleusercontent.com/aida-public/AB6AXuCTjlSv9NoAXEUdGkui9DYDNUUljXrBjOD69dbebshOmGeugE5omHaLSYf5m0nOaee7KdIVMdVugCl_5e8JSZOaU77px6cCpJRJ3EyTzzivbhVdvSdiYJzK41LBic_RKKIw8M54Pot11bVwwldv3CSESOLbLAU7ZDaOCy_DiEgOFBJvxSxdj-VFvD9ZIbwbIXI8LkaRcW8Y4VBDI-CiHGP7tfsWkgjzl3bhlHuMCrbyyhK_FbKwQbGXFYOJYCYy6BW8oNzKrr6vm7BD')"
-                }}
-              />
+
+        {/* ═══════════════════════════════════════════════════
+            HERO — full-bleed image
+            ═══════════════════════════════════════════════════ */}
+        <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+
+          {/* Background image with parallax */}
+          <div className="absolute inset-0 overflow-hidden">
+            <img
+              ref={orb1Ref}
+              src={heroImage}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover object-center will-change-transform"
+              style={{ transform: "scale(1.08) translateY(0px)" }}
+            />
+            {/* Multi-layer overlay for strong text contrast */}
+            {/* 1. Dark base wash over entire image */}
+            <div className="absolute inset-0 bg-black/50" />
+            {/* 2. Deep gradient: stronger at top & bottom, lighter in middle */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-black/70" />
+            {/* 3. Subtle radial vignette around edges */}
+            <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)" }} />
+          </div>
+
+          {/* Content */}
+          <div className="relative z-10 w-full max-w-5xl mx-auto px-6 lg:px-8 pt-24 pb-32 flex flex-col items-center text-center">
+
+            {/* Badge */}
+            <Reveal variant="fade-up">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#19D1E6]/50 bg-[#19D1E6]/15 backdrop-blur-md mb-8">
+                <span className="w-2 h-2 bg-[#19D1E6] rounded-full animate-pulse" />
+                <span className="text-sm font-semibold text-[#19D1E6] tracking-wide">Early Bird Registration Open</span>
+              </div>
+            </Reveal>
+
+            {/* Headline — white text with shadow for maximum pop */}
+            <Reveal variant="fade-up" delayMs={80}>
+              <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-[6rem] font-bold leading-[0.92] tracking-tight text-white mb-6"
+                style={{ textShadow: "0 2px 40px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.8)" }}>
+                Building Tomorrow's
+                <span className="block text-[#19D1E6]"
+                  style={{ textShadow: "0 0 60px rgba(25,209,230,0.5), 0 2px 20px rgba(0,0,0,0.5)" }}>
+                  Leaders.
+                </span>
+              </h1>
+            </Reveal>
+
+            {/* Event meta */}
+            <Reveal variant="fade-up" delayMs={200}>
+              <div className="flex flex-wrap items-center justify-center gap-3 text-white/75 text-xs font-semibold tracking-[0.18em] uppercase mb-10">
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[#19D1E6] text-sm">calendar_today</span>
+                  June 2026
+                </span>
+                <span className="text-white/30">·</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[#19D1E6] text-sm">location_on</span>
+                  University of Sri Jayewardenepura
+                </span>
+                <span className="text-white/30">·</span>
+                <span className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[#19D1E6] text-sm">group</span>
+                  300+ Attendees
+                </span>
+              </div>
+            </Reveal>
+
+            {/* CTAs */}
+            <Reveal variant="fade-up" delayMs={300}>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link to="/register" data-cursor="Register"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-base hover:bg-[#19D1E6]/90 transition-all duration-300 hover:scale-105 glow shadow-2xl">
+                  Register Now
+                  <span className="material-symbols-outlined text-[1.1rem]">arrow_forward</span>
+                </Link>
+                <a href="#sessions" data-cursor="View"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold rounded-full text-base hover:bg-white/20 hover:border-white/50 transition-all duration-300">
+                  Explore Sessions
+                </a>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Scroll cue */}
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10">
+            <a href="#about" data-cursor="Scroll"
+              className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
+              <span className="material-symbols-outlined animate-bounce text-3xl drop-shadow-lg">keyboard_arrow_down</span>
+            </a>
+          </div>
+
+          {/* Marquee strip */}
+          <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-md border-t border-white/10 py-3.5 overflow-hidden">
+            <div className="animate-marquee flex gap-16 whitespace-nowrap">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="flex shrink-0 gap-16">
+                  {["NEXA 2026", "ACS × USJP", "INNOVATION", "TECH TALKS", "NETWORKING", "KNOWLEDGE TRANSFER"].map(t => (
+                    <span key={t} className="text-xs font-bold tracking-[0.22em] text-white/40">{t} •</span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════
+            ABOUT NEXA — light section
+            ═══════════════════════════════════════════════════ */}
+        <section id="about" className="relative py-32 bg-white overflow-hidden scroll-mt-20">
+          <div className="absolute inset-0 grid-pattern-light" />
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#19D1E6]/5 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+
+              {/* Left: image visual */}
+              <Reveal variant="fade-right">
+                <div className="relative">
+                  {/*
+                    IMAGE PLACEHOLDER — ABOUT_SECTION
+                    Replace: <ImgSlot label="ABOUT_SECTION" src="/about-image.jpg" … />
+                  */}
+                  <ImgSlot
+                    label="ABOUT_SECTION"
+                    className="w-full aspect-square rounded-3xl"
+                  />
+                  {/* Logo strip over image */}
+                  <div className="absolute bottom-6 left-6 right-6 p-4 rounded-2xl bg-white/90 backdrop-blur-sm border border-gray-100 shadow-lg flex items-center justify-center gap-8">
+                    <img src={usjpLogo} alt="USJP" className="h-10 w-10 object-contain" />
+                    <div className="w-px h-8 bg-gray-200" />
+                    <img src={acsLogo}  alt="ACS"  className="h-10 w-10 object-contain" />
+                    <div className="w-px h-8 bg-gray-200" />
+                    <span className="text-sm font-semibold text-gray-600">ACS × USJP</span>
+                  </div>
+                </div>
+              </Reveal>
+
+              {/* Right: text + features */}
+              <div>
+                <Reveal variant="fade-left">
+                  <span className="text-[#19D1E6] font-semibold tracking-wider uppercase text-sm">About NEXA</span>
+                </Reveal>
+                <Reveal variant="fade-left" delayMs={80}>
+                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mt-4 mb-6 leading-tight tracking-tight text-gray-900">
+                    Where Vision
+                    <span className="block text-[#19D1E6]">Meets Reality</span>
+                  </h2>
+                </Reveal>
+                <Reveal variant="fade-left" delayMs={160}>
+                  <p className="text-lg text-gray-500 leading-relaxed mb-8">
+                    For the first time, the Association of Computing Students (ACS) of the University of
+                    Sri Jayewardenepura presents NEXA — a one-day tech talk series bridging the gap between
+                    academic learning and the rapidly evolving technology industry.
+                  </p>
+                </Reveal>
+                <Reveal variant="fade-left" delayMs={240}>
+                  <div className="flex flex-wrap gap-10 mb-10">
+                    <AnimatedStat value="300+" label="Expected Participants" light />
+                    <AnimatedStat value="4"    label="Expert Sessions"       light />
+                    <AnimatedStat value="1"    label="Action-Packed Day"     light />
+                  </div>
+                </Reveal>
+
+                <div className="space-y-4">
+                  {ABOUT_FEATURES.map((f, i) => (
+                    <Reveal key={f.title} variant="fade-left" delayMs={320 + i * 80}>
+                      <div className="group p-5 rounded-2xl bg-gray-50 border border-gray-200 hover:border-[#19D1E6]/50 hover:bg-white transition-all duration-400 hover:shadow-sm"
+                        data-cursor="Learn">
+                        <div className="flex items-start gap-4">
+                          <div className="p-2.5 rounded-xl bg-[#19D1E6]/10 text-[#19D1E6] group-hover:bg-[#19D1E6] group-hover:text-white transition-colors duration-300 shrink-0">
+                            <span className="material-symbols-outlined text-lg">{f.icon}</span>
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-[#19D1E6] transition-colors">{f.title}</h3>
+                            <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </Reveal>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════
+            SESSIONS — dark section
+            ═══════════════════════════════════════════════════ */}
+        <EventSessions
+          includeAnchorId
+          sectionClassName="relative py-32 bg-[#0e0e0e] overflow-hidden scroll-mt-20"
+        />
+
+
+        {/* ═══════════════════════════════════════════════════
+            ABOUT ACS — light section
+            ═══════════════════════════════════════════════════ */}
+        <section className="relative py-32 bg-white overflow-hidden">
+          <div className="absolute inset-0 grid-pattern-light" />
+          <div className="absolute top-0 left-0 w-96 h-96 bg-[#19D1E6]/4 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+
+              <div>
+                <Reveal variant="fade-right">
+                  <span className="text-[#19D1E6] font-semibold tracking-wider uppercase text-sm">About ACS</span>
+                </Reveal>
+                <Reveal variant="fade-right" delayMs={80}>
+                  <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6 leading-tight tracking-tight text-gray-900">
+                    Driving Innovation
+                    <span className="block text-[#19D1E6]">in Sri Lanka</span>
+                  </h2>
+                </Reveal>
+                <Reveal variant="fade-right" delayMs={160}>
+                  <p className="text-lg text-gray-500 leading-relaxed mb-6">
+                    The Association of Computing Students (ACS) at the University of Sri Jayewardenepura
+                    is a vibrant community dedicated to fostering innovation, collaboration, and excellence
+                    in computing. As a student-driven initiative under the Faculty of Computing, ACS
+                    connects students with industry professionals and emerging technologies.
+                  </p>
+                </Reveal>
+                <Reveal variant="fade-right" delayMs={240}>
+                  <p className="text-lg text-gray-500 leading-relaxed mb-8">
+                    Through workshops, networking events, and collaborative projects, ACS empowers
+                    students and cultivates future technology leaders — inspiring creativity and
+                    practical learning.
+                  </p>
+                </Reveal>
+                <Reveal variant="fade-right" delayMs={320}>
+                  <div className="grid grid-cols-2 gap-5">
+                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200">
+                      <span className="text-2xl font-bold text-[#19D1E6]">300+</span>
+                      <p className="text-sm text-gray-500 mt-1">Expected Attendees</p>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200">
+                      <span className="text-2xl font-bold text-[#19D1E6]">4</span>
+                      <p className="text-sm text-gray-500 mt-1">Expert Speakers</p>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200">
+                      <span className="text-2xl font-bold text-[#19D1E6]">2025</span>
+                      <p className="text-sm text-gray-500 mt-1">Inaugural Year</p>
+                    </div>
+                    <div className="p-5 rounded-2xl bg-[#19D1E6]/8 border border-[#19D1E6]/30">
+                      <span className="text-2xl font-bold text-[#19D1E6]">1</span>
+                      <p className="text-sm text-gray-500 mt-1">Action-Packed Day</p>
+                    </div>
+                  </div>
+                </Reveal>
+              </div>
+
+              {/* Right: visual */}
+              <Reveal variant="fade-left">
+                <div className="relative">
+                  {/*
+                    IMAGE PLACEHOLDER — ACS_SECTION
+                    Replace: <ImgSlot label="ACS_SECTION" src="/acs-image.jpg" … />
+                  */}
+                  <ImgSlot
+                    label="ACS_SECTION"
+                    className="w-full aspect-square rounded-3xl"
+                  />
+                  {/* Floating logo badge */}
+                  <div className="absolute -bottom-6 -right-6 p-5 rounded-2xl bg-white border border-gray-200 shadow-xl flex items-center gap-3">
+                    <img src={acsLogo} alt="ACS" className="h-10 w-10 object-contain" />
+                    <div>
+                      <div className="font-bold text-gray-900 text-sm">ACS</div>
+                      <div className="text-xs text-gray-500">Faculty of Computing</div>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
             </div>
           </div>
 
-          <Reveal className="relative z-10 mx-auto max-w-5xl text-center" variant="fade-up">
-            <h1 className="font-headline mb-6 text-[clamp(4rem,14vw,10rem)] font-black uppercase leading-[0.85] tracking-[calc(-0.06em)] text-white sm:mb-8">
-              NEXA<span className="text-[var(--brand)]">.</span>
-            </h1>
-            <p className="font-body mx-auto mb-8 max-w-2xl text-base leading-relaxed tracking-normal text-white/60 sm:mb-12 sm:text-lg md:text-xl">
-              A One Day Tech Talk Series<br/>Bridging the gap between academic learning and the rapidly evolving technology industry.
-            </p>
-            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-              <Link
-                to="/register"
-                className="bg-[var(--brand)] w-full max-w-[22rem] px-8 py-4 text-center font-headline text-sm font-bold uppercase tracking-widest text-white hover:brightness-110 transition-all sm:w-auto sm:px-10"
-              >
+          {/* Marquee strip */}
+          <div className="mt-24 border-y border-gray-100 py-6 overflow-hidden">
+            <div className="animate-marquee-slow flex gap-16 whitespace-nowrap">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="flex shrink-0 gap-16">
+                  {["INNOVATION", "COLLABORATION", "EXCELLENCE", "COMMUNITY", "GROWTH", "IMPACT"].map(t => (
+                    <span key={t} className="text-2xl font-bold text-[#19D1E6]/15 tracking-widest">{t} •</span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════
+            COMMITTEE — dark section (portrait card layout)
+            ═══════════════════════════════════════════════════ */}
+        <section id="contact" className="relative py-24 bg-[#0e0e0e] overflow-hidden scroll-mt-20">
+          <div className="absolute inset-0 grid-pattern" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#19D1E6]/4 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+
+            {/* Left-aligned header */}
+            <div className="mb-14">
+              <Reveal variant="fade-up">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="w-2 h-2 rounded-full bg-[#19D1E6]" />
+                  <span className="text-sm text-[#888888] font-medium tracking-wide">Organizing Team</span>
+                </div>
+              </Reveal>
+              <Reveal variant="fade-up" delayMs={80}>
+                <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight tracking-tight mb-4">
+                  Meet the Organizing <span className="text-[#19D1E6]">Committee</span>
+                </h2>
+              </Reveal>
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <Reveal variant="fade-up" delayMs={160}>
+                  <p className="text-[#888888] text-lg max-w-xl leading-relaxed">
+                    Dedicated students working tirelessly to create an unforgettable experience.
+                  </p>
+                </Reveal>
+                <Reveal variant="fade-up" delayMs={200}>
+                  <a href="mailto:nexa.acs.sjp@gmail.com" data-cursor="Email"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#19D1E6] hover:text-[#19D1E6]/70 transition-colors shrink-0">
+                    <span className="material-symbols-outlined text-base">mail</span>
+                    nexa.acs.sjp@gmail.com
+                  </a>
+                </Reveal>
+              </div>
+            </div>
+
+            {/* Portrait card grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+              {COMMITTEE.map((member, i) => (
+                <Reveal key={member.name} variant="fade-up" delayMs={i * 50}>
+                  <div className="group rounded-2xl overflow-hidden border border-[#2a2a2a] bg-[#161616] hover:border-[#19D1E6]/40 transition-all duration-400 hover:-translate-y-1"
+                    data-cursor="View">
+
+                    {/* Portrait image */}
+                    <div className="relative aspect-[3/4] overflow-hidden bg-[#111]">
+                      {/*
+                        COMMITTEE MEMBER IMAGES
+                        To swap: update the `image` field in the COMMITTEE array.
+                      */}
+                      <img
+                        src={member.image}
+                        alt={member.name}
+                        className="w-full h-full object-cover object-top grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
+                      />
+                      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+                    </div>
+
+                    {/* Info bar — dark panel at bottom */}
+                    <div className="px-4 py-3.5 bg-[#161616] border-t border-[#2a2a2a] flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-white text-sm truncate group-hover:text-[#19D1E6] transition-colors">{member.name}</h3>
+                        <p className="text-[#888888] text-xs mt-0.5 truncate">{member.role}</p>
+                      </div>
+                      <a
+                        href={`tel:${member.phone.replace(/\s/g, "")}`}
+                        data-cursor="Call"
+                        className="w-8 h-8 rounded-lg bg-[#222] text-[#555] flex items-center justify-center shrink-0 hover:bg-[#19D1E6] hover:text-[#0e0e0e] transition-colors duration-300"
+                        title={member.phone}
+                      >
+                        <span className="material-symbols-outlined text-[1rem]">phone</span>
+                      </a>
+                    </div>
+
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+          </div>
+        </section>
+
+      </main>
+
+      {/* ═══════════════════════════════════════════════════
+          FOOTER — dark
+          ═══════════════════════════════════════════════════ */}
+      <footer className="relative bg-[#0e0e0e] pt-24 pb-8 overflow-hidden border-t border-[#2a2a2a]/30">
+        <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-[#19D1E6]/4 to-transparent pointer-events-none" />
+        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+          <Reveal variant="fade-up">
+            <div className="text-center mb-20">
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight text-white">
+                Ready to <span className="text-[#19D1E6]">Join Us?</span>
+              </h2>
+              <p className="text-lg text-[#888888] max-w-2xl mx-auto mb-8">
+                Don't miss the most anticipated tech event of 2026. Secure your spot today.
+              </p>
+              <Link to="/register" data-cursor="Go"
+                className="inline-flex items-center gap-2 px-10 py-5 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-lg hover:bg-[#19D1E6]/90 transition-all hover:scale-105 glow">
                 Register Now
+                <span className="material-symbols-outlined text-[1.1rem]">arrow_forward</span>
               </Link>
-              <a
-                href="#about"
-                className="border border-white/20 w-full max-w-[22rem] px-8 py-4 text-center font-headline text-sm font-bold uppercase tracking-widest text-white hover:bg-white/5 transition-colors sm:w-auto sm:px-10"
-              >
-                Learn More
-              </a>
             </div>
           </Reveal>
 
-          {/* Stats Bar */}
-          <div className="absolute bottom-0 w-full border-t border-white/10 bg-black/40 py-6 backdrop-blur-md sm:py-8">
-            <div className="mx-auto grid w-full max-w-7xl grid-cols-2 gap-6 px-5 sm:px-6 md:grid-cols-4 md:gap-8 md:px-8 lg:px-12">
-              <div className="flex flex-col">
-                <span className="font-headline text-2xl font-bold tracking-tighter text-white">300+</span>
-                <span className="font-label text-[0.65rem] uppercase tracking-[0.2em] text-white/40">Estimated Participants</span>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <img src={nexaLogo} alt="NEXA" className="h-7 w-7 object-contain" />
+                <span className="text-xl font-bold text-[#19D1E6]">NEXA</span>
               </div>
-              <div className="flex flex-col">
-                <span className="font-headline text-2xl font-bold tracking-tighter text-white">4</span>
-                <span className="font-label text-[0.65rem] uppercase tracking-[0.2em] text-white/40">Expert Sessions</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-headline text-sm sm:text-base md:text-xl font-bold tracking-tighter text-white">University of Sri Jayewardenepura</span>
-                <span className="font-label text-[0.65rem] uppercase tracking-[0.2em] text-white/40">Venue</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-headline text-2xl font-bold tracking-tighter text-white">June 2026</span>
-                <span className="font-label text-[0.65rem] uppercase tracking-[0.2em] text-white/40">Event Date</span>
-              </div>
+              <p className="text-[#888888] text-sm leading-relaxed">
+                Building Tomorrow's Leaders. The premier one-day tech talk series for students and professionals.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4 text-sm">Summit</h4>
+              <ul className="space-y-3">
+                {[["About", "#about"], ["Sessions", "#sessions"], ["Committee", "#contact"], ["Register", "/register"]].map(([l, h]) => (
+                  <li key={l}><a href={h} className="text-[#888888] text-sm hover:text-[#19D1E6] transition-colors">{l}</a></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4 text-sm">Opportunities</h4>
+              <ul className="space-y-3">
+                {[["Volunteer", "#contact"], ["Speak", "#contact"], ["Partner", "#contact"]].map(([l, h]) => (
+                  <li key={l}><a href={h} className="text-[#888888] text-sm hover:text-[#19D1E6] transition-colors">{l}</a></li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold text-white mb-4 text-sm">Contact</h4>
+              <ul className="space-y-3">
+                <li className="flex items-center gap-2 text-[#888888] text-sm">
+                  <span className="material-symbols-outlined text-[#19D1E6] text-base">mail</span>
+                  nexa.acs.sjp@gmail.com
+                </li>
+                <li className="flex items-start gap-2 text-[#888888] text-sm">
+                  <span className="material-symbols-outlined text-[#19D1E6] text-base mt-0.5">location_on</span>
+                  <span>University of Sri Jayewardenepura<br />Sri Lanka</span>
+                </li>
+              </ul>
             </div>
           </div>
-        </section>
 
-        {/* About Section */}
-        <section id="about" className="scroll-mt-32 border-y border-white/5 bg-[#0e0e0e] px-5 py-20 sm:px-6 sm:py-24 md:px-8 md:py-28 lg:px-12 lg:py-32">
-          <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 lg:grid-cols-2 lg:gap-24">
-            <Reveal className="scroll-mt-32" variant="fade-left">
-              <span className="font-label mb-6 block text-[0.6875rem] font-bold uppercase tracking-[0.3em] text-[var(--brand)]">
-                What is NEXA
-              </span>
-              <h2 className="font-headline mb-10 text-5xl font-bold leading-tight tracking-tighter text-white md:text-7xl">
-                Bridging Academia & Industry
-              </h2>
-              <div className="font-body mb-12 max-w-xl text-lg leading-relaxed text-white/60 space-y-4">
-                <p>
-                  For the first time, the Association of Computing Students (ACS) of the University of Sri Jayewardenepura proudly presents NEXA — a one day tech talk series designed to bridge the gap between academic learning and the rapidly evolving technology industry. The event brings together undergraduate students, technology professionals, and industry experts to share knowledge, experiences, and insights about the latest trends and innovations.
-                </p>
-                <p>
-                  Through engaging tech talks and interactive sessions, NEXA aims to provide students with exposure to real world industry practices, emerging technologies, and career opportunities while fostering a culture of learning, innovation, and collaboration among future technology leaders in Sri Lanka.
-                </p>
-              </div>
-            </Reveal>
-            <Reveal className="group relative" variant="fade-right" delayMs={80}>
-              <div className="absolute -inset-1 opacity-0 blur-2xl transition-opacity group-hover:opacity-100 bg-[var(--brand)]/20" />
-              <img
-                alt="Technical Graphic"
-                className="relative aspect-square w-full border border-white/10 object-cover"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVibeWUciBas9kPMp7nNIEO8ezWQoIIucdc_g5IPvrtRbmVk_g0z5v9MBjDVybOpIoIU8MAesFpELz1vFPDQL2wY7lppch6SeBw4FWnhXyJW9ykx1JQIDa9Mbn551a1aRI2YZldOraBeXbcTKCDKZn3VylJ3Zzpztm6Ss5QYrxSdx-_TI0PuAMnoaWdPypLq_7FbEiRY5-C_HY6wf3rZ4ugHEt0tVT4HHLWE_PLzcbMyFmnp5aSm8cialtxh-9oHElBkbvNRoQ9d-J"
-              />
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Mission & Target Audience */}
-        <section className="bg-[#0e0e0e] px-5 py-20 sm:px-6 sm:py-24 md:px-8 md:py-28 lg:px-12 lg:py-32">
-          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-1 border border-white/10 md:grid-cols-2">
-            <Reveal
-              className="group relative overflow-hidden border-l-4 border-[var(--brand)] bg-[#131313] p-10 md:p-16"
-              variant="fade-up"
-            >
-              <div className="absolute right-0 top-0 p-8 text-white opacity-5 transition-opacity group-hover:opacity-10">
-                <span className="material-symbols-outlined text-[8rem]">visibility</span>
-              </div>
-              <span className="font-label mb-8 block text-xs font-bold uppercase tracking-widest text-[var(--brand)]">
-                Our Mission
-              </span>
-              <h3 className="font-headline mb-6 text-4xl font-bold tracking-tighter text-white">
-                Connecting Students and Professionals
-              </h3>
-              <p className="font-body leading-relaxed text-white/60">
-                To bridge the gap between academia and industry by delivering impactful tech talks that connect students with professionals, inspire innovation, and prepare them for real-world careers.
-              </p>
-            </Reveal>
-            <Reveal
-              className="group relative overflow-hidden border-l-4 border-white/20 bg-[#131313] p-10 md:p-16"
-              variant="fade-up"
-              delayMs={90}
-            >
-              <div className="absolute right-0 top-0 p-8 text-white opacity-5 transition-opacity group-hover:opacity-10">
-                <span className="material-symbols-outlined text-[8rem]">bolt</span>
-              </div>
-              <span className="font-label mb-8 block text-xs font-bold uppercase tracking-widest text-white/40">
-                Target Audience
-              </span>
-              <h3 className="font-headline mb-6 text-4xl font-bold tracking-tighter text-white">
-                Future Technology Leaders
-              </h3>
-              <p className="font-body leading-relaxed text-white/60">
-                Undergraduate students across Sri Lanka interested in the IT industry and emerging technologies. Primarily focused on computing and IT students, but welcomes all faculties with an interest in technology, innovation, and IT career opportunities.
-              </p>
-            </Reveal>
-          </div>
-        </section>
-
-        <EventSessions
-          includeAnchorId
-          sectionClassName="scroll-mt-32 bg-[#0e0e0e] px-5 py-20 overflow-hidden sm:px-6 sm:py-24 md:px-8 md:py-28 lg:px-12 lg:py-32"
-        />
-
-        {/* SPONSORSHIP PACKAGES Section */}
-        <section id="sponsors" className="scroll-mt-32 bg-[#0e0e0e] px-5 py-20 sm:px-6 sm:py-24 md:px-8 md:py-28 lg:px-12 lg:py-32">
-          <div className="mx-auto max-w-7xl">
-            <Reveal className="mb-20 text-center" variant="fade-up">
-              <h2 className="font-headline mb-4 text-5xl font-bold uppercase tracking-tighter text-white md:text-6xl">
-                Sponsorship Packages
-              </h2>
-              <p className="font-body mx-auto max-w-2xl leading-relaxed tracking-normal text-white/60">
-                Partner with us to support the next generation of technology leaders. We offer various partnership opportunities.
-              </p>
-            </Reveal>
-            <Reveal className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5" variant="fade-up" delayMs={80}>
-              {SPONSORSHIP_PACKAGES.map((item) => (
-                <div key={item.tier} className={`group flex flex-col items-center justify-center border-t-4 bg-[#131313] p-8 transition-all hover:-translate-y-2 ${item.color}`}>
-                  <h5 className="font-headline mb-4 text-center text-xl font-bold uppercase text-white">{item.tier}</h5>
-                  <span className="font-label text-sm font-bold tracking-widest">{item.amount}</span>
-                </div>
-              ))}
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Partnership Packages */}
-        <section className="bg-[#0e0e0e] px-5 py-20 sm:px-6 sm:py-24 md:px-8 md:py-28 lg:px-12 lg:py-32">
-          <div className="mx-auto max-w-7xl">
-            <Reveal className="mb-16 flex flex-col items-start justify-between gap-8 md:flex-row md:items-end" variant="fade-up">
-              <h2 className="font-headline text-5xl font-bold uppercase tracking-tighter text-white md:text-6xl">
-                Partnership Packages
-              </h2>
-            </Reveal>
-
-            <Reveal className="grid grid-cols-1 gap-1 border border-white/10 bg-white/10 sm:grid-cols-2 md:grid-cols-3" variant="fade-up" delayMs={80}>
-              {PARTNERSHIP_ROLES.map((role) => (
-                <div key={role} className="group flex flex-col items-center justify-center bg-[#0e0e0e] p-8 text-center border border-white/5 transition-all hover:border-[var(--brand)]">
-                  <span className="material-symbols-outlined mb-4 text-4xl text-[var(--brand)] opacity-50 group-hover:opacity-100">
-                    handshake
-                  </span>
-                  <h4 className="font-headline text-xl font-bold text-white">{role}</h4>
-                </div>
-              ))}
-            </Reveal>
-          </div>
-        </section>
-
-        {/* About ACS */}
-        <section className="border-t border-white/5 bg-[#0e0e0e] px-5 py-20 sm:px-6 sm:py-24 md:px-8 md:py-28 lg:px-12 lg:py-32">
-          <div className="mx-auto max-w-7xl">
-            <Reveal className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.35fr_1fr] lg:gap-20" variant="fade-up">
-              <div>
-                <h2 className="font-headline mb-10 text-4xl font-bold uppercase tracking-tighter text-white md:text-5xl">
-                  About ACS
-                </h2>
-                <div className="font-body max-w-4xl space-y-4 text-lg leading-relaxed text-white/60">
-                  <p>
-                    The Association of Computing Students (ACS) at the University of Sri Jayewardenepura is a vibrant and dynamic community dedicated to fostering innovation, collaboration, and excellence in the field of computing. As a student driven initiative under the Faculty of Computing, ACS provides a platform for students to explore emerging technologies, connect with industry professionals, and develop skills essential for the rapidly evolving tech landscape.
-                  </p>
-                  <p>
-                    The association organizes workshops, hosts networking opportunities, and drives collaborative projects to empower students and cultivate future technology leaders. Through these initiatives, ACS aims to inspire creativity, encourage practical learning, and strengthen the student community within the Faculty of Computing.
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 items-center gap-6 sm:gap-8">
-                <img
-                  src={usjpLogo}
-                  alt="University of Sri Jayewardenepura logo"
-                  className="h-44 w-full object-contain sm:h-52 md:h-56"
-                />
-                <img
-                  src={acsLogo}
-                  alt="Association of Computing Students logo"
-                  className="h-44 w-full object-contain sm:h-52 md:h-56"
-                />
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        {/* Contact Section */}
-        <section id="contact" className="border-t border-white/5 bg-[#0b0b0b] px-5 py-20 sm:px-6 sm:py-24 md:px-8 md:py-28 lg:px-12 lg:py-32">
-          <div className="mx-auto max-w-7xl">
-            <Reveal className="mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between" variant="fade-up">
-              <h2 className="font-headline text-5xl font-bold uppercase tracking-tighter text-white md:text-6xl">
-                The Committee
-              </h2>
-              <p className="font-body max-w-lg text-sm leading-relaxed text-white/40">
-                Meet the core organizing team behind NEXA. Replace each placeholder with your final member photos.
-              </p>
-            </Reveal>
-
-            <Reveal className="mb-10 border border-white/10 bg-[#131313] p-6 md:p-8" variant="fade-up" delayMs={50}>
-              <h4 className="font-headline text-lg font-bold uppercase text-white">General Contact</h4>
-              <a href="mailto:nexa.acs.sjp@gmail.com" className="font-body mt-2 inline-block text-sm leading-relaxed text-[var(--brand)]">
-                nexa.acs.sjp@gmail.com
-              </a>
-            </Reveal>
-
-            <Reveal className="grid grid-cols-1 gap-4 pb-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-6" variant="fade-up" delayMs={80}>
-              {CONTACTS.map((contact) => (
-                <article key={contact.name} className="group w-full overflow-hidden border border-white/10 bg-[#0f0f0f]">
-                  <div className="h-[18rem] border-b border-white/10 bg-[#151515] sm:h-[20rem] lg:h-[22rem]">
-                    <img
-                      src={contact.image}
-                      alt={contact.name}
-                      className="h-full w-full object-cover object-top grayscale transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0"
-                    />
-                  </div>
-                  <div className="space-y-2 p-5 md:p-6">
-                    <h4 className="font-headline text-xl font-bold tracking-tight text-white md:text-2xl">{contact.name}</h4>
-                    <p className="font-label text-xs font-bold uppercase tracking-[0.2em] text-[var(--brand)]">
-                      {contact.role}
-                    </p>
-                    <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="font-body inline-block pt-1 text-sm font-semibold text-white/70 hover:text-white">
-                      {contact.phone}
-                    </a>
-                  </div>
-                </article>
-              ))}
-            </Reveal>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="flex w-full flex-col items-center bg-[#0e0e0e] px-5 py-16 text-center border-t border-white/10 sm:px-6 md:px-8 lg:px-12 md:py-20">
-        <div className="font-headline mb-8 text-4xl font-black uppercase tracking-tighter text-white/5">NEXA</div>
-        <div className="mb-16 flex flex-wrap justify-center gap-8 md:gap-12">
-          <a className="font-label text-[0.6875rem] uppercase tracking-widest text-white/40 transition-colors hover:text-[var(--brand)]" href="#">
-            Privacy Policy
-          </a>
-          <a className="font-label text-[0.6875rem] uppercase tracking-widest text-white/40 transition-colors hover:text-[var(--brand)]" href="#">
-            Terms of Service
-          </a>
-          <a className="font-label text-[0.6875rem] uppercase tracking-widest text-white/40 transition-colors hover:text-[var(--brand)]" href="#">
-            Press Kit
-          </a>
-          <a className="font-label text-[0.6875rem] uppercase tracking-widest text-white/40 transition-colors hover:text-[var(--brand)]" href="#contact">
-            Contact
-          </a>
-        </div>
-        <div className="mb-12">
-          <p className="font-label text-[0.6875rem] uppercase tracking-widest text-white/20">
-            © 2026 NEXA. ALL RIGHTS RESERVED.
-          </p>
-        </div>
-
-        {/* News ticker */}
-        <div className="w-full overflow-hidden whitespace-nowrap border-y border-white/5 py-4 opacity-20">
-          <div className="animate-marquee flex gap-20">
-            <span className="font-label text-[0.6875rem] font-bold uppercase tracking-[0.4em] text-[var(--brand)]">
-              NEXA
-            </span>
-            <span className="font-label text-[0.6875rem] uppercase tracking-[0.4em] text-white">TECH TALK SERIES</span>
-            <span className="font-label text-[0.6875rem] font-bold uppercase tracking-[0.4em] text-[var(--brand)]">
-              ACS SJP
-            </span>
-            <span className="font-label text-[0.6875rem] uppercase tracking-[0.4em] text-white">INNOVATION</span>
-            <span className="font-label text-[0.6875rem] font-bold uppercase tracking-[0.4em] text-[var(--brand)]">
-              FUTURE LEADERS
-            </span>
-            <span className="font-label text-[0.6875rem] uppercase tracking-[0.4em] text-white">
-              NEXA 2026
-            </span>
+          <div className="pt-8 border-t border-[#2a2a2a]/30 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-[#888888] text-sm">© 2026 NEXA · ACS SJP. All rights reserved.</p>
+            <p className="text-[#888888] text-sm">Crafted with <span className="text-[#19D1E6]">♥</span> by the ACS Team</p>
           </div>
         </div>
       </footer>
     </div>
   );
 }
-
