@@ -176,7 +176,7 @@ export default function HomePage() {
           ? "bg-white/95 backdrop-blur-xl shadow-sm border-b border-gray-100"
           : "bg-white/90 backdrop-blur-md border-b border-gray-100"
       }`}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-18 py-4">
             <a href="#top" className="flex items-center gap-2.5" data-cursor="Home">
               <img src={nexaLogo} alt="NEXA" className="h-8 w-8 object-contain" />
@@ -260,7 +260,7 @@ export default function HomePage() {
           </div>
 
           {/* Content */}
-          <div className="relative z-10 w-full max-w-5xl mx-auto px-6 lg:px-8 pt-24 pb-32 flex flex-col items-center text-center">
+          <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-28 sm:pt-24 sm:pb-32 md:pb-36 flex flex-col items-center text-center">
 
             {/* Badge */}
             <Reveal variant="fade-up">
@@ -270,9 +270,9 @@ export default function HomePage() {
               </div>
             </Reveal>
 
-            {/* Headline — white text with shadow for maximum pop */}
+            {/* Headline */}
             <Reveal variant="fade-up" delayMs={80}>
-              <h1 className="text-6xl sm:text-7xl md:text-8xl lg:text-[6rem] font-bold leading-[0.92] tracking-tight text-white mb-6"
+              <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-[5.5rem] font-bold leading-[0.92] tracking-tight text-white mb-6"
                 style={{ textShadow: "0 2px 40px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.8)" }}>
                 Building Tomorrow's
                 <span className="block text-[#19D1E6]"
@@ -284,17 +284,18 @@ export default function HomePage() {
 
             {/* Event meta */}
             <Reveal variant="fade-up" delayMs={200}>
-              <div className="flex flex-wrap items-center justify-center gap-3 text-white/75 text-xs font-semibold tracking-[0.18em] uppercase mb-10">
+              <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2 sm:gap-3 text-white/75 text-xs font-semibold tracking-[0.14em] uppercase mb-10">
                 <span className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[#19D1E6] text-sm">calendar_today</span>
                   June 2026
                 </span>
-                <span className="text-white/30">·</span>
+                <span className="hidden sm:inline text-white/30">·</span>
                 <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[#19D1E6] text-sm">location_on</span>
-                  University of Sri Jayewardenepura
+                  <span className="material-symbols-outlined text-[#19D1E6] text-sm shrink-0">location_on</span>
+                  <span className="sm:hidden">USJP, Sri Lanka</span>
+                  <span className="hidden sm:inline">University of Sri Jayewardenepura</span>
                 </span>
-                <span className="text-white/30">·</span>
+                <span className="hidden sm:inline text-white/30">·</span>
                 <span className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[#19D1E6] text-sm">group</span>
                   300+ Attendees
@@ -318,8 +319,8 @@ export default function HomePage() {
             </Reveal>
           </div>
 
-          {/* Scroll cue */}
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-10">
+          {/* Scroll cue — sits above the marquee strip */}
+          <div className="absolute bottom-16 sm:bottom-14 left-1/2 -translate-x-1/2 z-10">
             <a href="#about" data-cursor="Scroll"
               className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
               <span className="material-symbols-outlined animate-bounce text-3xl drop-shadow-lg">keyboard_arrow_down</span>
@@ -343,73 +344,69 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════
             ABOUT NEXA — light section
             ═══════════════════════════════════════════════════ */}
-        <section id="about" className="relative py-32 bg-white overflow-hidden scroll-mt-20">
+        <section id="about" className="relative py-16 md:py-32 bg-white overflow-hidden scroll-mt-20">
           <div className="absolute inset-0 grid-pattern-light" />
           <div className="absolute top-0 right-0 w-96 h-96 bg-[#19D1E6]/5 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
-              {/* Left: image visual */}
-              <Reveal variant="fade-right">
+              {/* Image — hidden on mobile, shown from lg up to avoid stacking issues */}
+              <Reveal variant="fade-right" className="hidden lg:block">
                 <div className="relative">
-                  {/*
-                    IMAGE PLACEHOLDER — ABOUT_SECTION
-                    Replace: <ImgSlot label="ABOUT_SECTION" src="/about-image.jpg" … />
-                  */}
                   <ImgSlot
                     label="ABOUT_SECTION"
                     className="w-full aspect-square rounded-3xl"
                   />
-                  {/* Logo strip over image */}
-                  <div className="absolute bottom-6 left-6 right-6 p-4 rounded-2xl bg-white/90 backdrop-blur-sm border border-gray-100 shadow-lg flex items-center justify-center gap-8">
-                    <img src={usjpLogo} alt="USJP" className="h-10 w-10 object-contain" />
-                    <div className="w-px h-8 bg-gray-200" />
-                    <img src={acsLogo}  alt="ACS"  className="h-10 w-10 object-contain" />
-                    <div className="w-px h-8 bg-gray-200" />
+                  {/* Logo strip */}
+                  <div className="absolute bottom-6 left-6 right-6 p-3 rounded-2xl bg-white/90 backdrop-blur-sm border border-gray-100 shadow-lg flex items-center justify-center gap-4">
+                    <img src={usjpLogo} alt="USJP" className="h-8 w-8 object-contain" />
+                    <div className="w-px h-6 bg-gray-200" />
+                    <img src={acsLogo}  alt="ACS"  className="h-8 w-8 object-contain" />
+                    <div className="w-px h-6 bg-gray-200" />
                     <span className="text-sm font-semibold text-gray-600">ACS × USJP</span>
                   </div>
                 </div>
               </Reveal>
 
-              {/* Right: text + features */}
+              {/* Text + features */}
               <div>
                 <Reveal variant="fade-left">
                   <span className="text-[#19D1E6] font-semibold tracking-wider uppercase text-sm">About NEXA</span>
                 </Reveal>
                 <Reveal variant="fade-left" delayMs={80}>
-                  <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mt-4 mb-6 leading-tight tracking-tight text-gray-900">
+                  <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mt-4 mb-6 leading-tight tracking-tight text-gray-900">
                     Where Vision
                     <span className="block text-[#19D1E6]">Meets Reality</span>
                   </h2>
                 </Reveal>
                 <Reveal variant="fade-left" delayMs={160}>
-                  <p className="text-lg text-gray-500 leading-relaxed mb-8">
+                  <p className="text-base md:text-lg text-gray-500 leading-relaxed mb-8">
                     For the first time, the Association of Computing Students (ACS) of the University of
                     Sri Jayewardenepura presents NEXA — a one-day tech talk series bridging the gap between
                     academic learning and the rapidly evolving technology industry.
                   </p>
                 </Reveal>
                 <Reveal variant="fade-left" delayMs={240}>
-                  <div className="flex flex-wrap gap-10 mb-10">
+                  <div className="flex flex-wrap gap-8 md:gap-10 mb-10">
                     <AnimatedStat value="300+" label="Expected Participants" light />
                     <AnimatedStat value="4"    label="Expert Sessions"       light />
                     <AnimatedStat value="1"    label="Action-Packed Day"     light />
                   </div>
                 </Reveal>
 
-                <div className="space-y-4">
+                <div className="space-y-3 md:space-y-4">
                   {ABOUT_FEATURES.map((f, i) => (
                     <Reveal key={f.title} variant="fade-left" delayMs={320 + i * 80}>
-                      <div className="group p-5 rounded-2xl bg-gray-50 border border-gray-200 hover:border-[#19D1E6]/50 hover:bg-white transition-all duration-400 hover:shadow-sm"
+                      <div className="group p-4 md:p-5 rounded-2xl bg-gray-50 border border-gray-200 hover:border-[#19D1E6]/50 hover:bg-white transition-all duration-400 hover:shadow-sm"
                         data-cursor="Learn">
-                        <div className="flex items-start gap-4">
+                        <div className="flex items-start gap-3 md:gap-4">
                           <div className="p-2.5 rounded-xl bg-[#19D1E6]/10 text-[#19D1E6] group-hover:bg-[#19D1E6] group-hover:text-white transition-colors duration-300 shrink-0">
                             <span className="material-symbols-outlined text-lg">{f.icon}</span>
                           </div>
                           <div>
-                            <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-[#19D1E6] transition-colors">{f.title}</h3>
-                            <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+                            <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-[#19D1E6] transition-colors text-sm md:text-base">{f.title}</h3>
+                            <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{f.desc}</p>
                           </div>
                         </div>
                       </div>
@@ -426,32 +423,32 @@ export default function HomePage() {
             ═══════════════════════════════════════════════════ */}
         <EventSessions
           includeAnchorId
-          sectionClassName="relative py-32 bg-[#0e0e0e] overflow-hidden scroll-mt-20"
+          sectionClassName="relative py-16 md:py-32 bg-[#0e0e0e] overflow-hidden scroll-mt-20"
         />
 
 
         {/* ═══════════════════════════════════════════════════
             ABOUT ACS — light section
             ═══════════════════════════════════════════════════ */}
-        <section className="relative py-32 bg-white overflow-hidden">
+        <section className="relative py-16 md:py-32 bg-white overflow-hidden">
           <div className="absolute inset-0 grid-pattern-light" />
           <div className="absolute top-0 left-0 w-96 h-96 bg-[#19D1E6]/4 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
 
               <div>
                 <Reveal variant="fade-right">
                   <span className="text-[#19D1E6] font-semibold tracking-wider uppercase text-sm">About ACS</span>
                 </Reveal>
                 <Reveal variant="fade-right" delayMs={80}>
-                  <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6 leading-tight tracking-tight text-gray-900">
+                  <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold mt-4 mb-6 leading-tight tracking-tight text-gray-900">
                     Driving Innovation
                     <span className="block text-[#19D1E6]">in Sri Lanka</span>
                   </h2>
                 </Reveal>
                 <Reveal variant="fade-right" delayMs={160}>
-                  <p className="text-lg text-gray-500 leading-relaxed mb-6">
+                  <p className="text-base md:text-lg text-gray-500 leading-relaxed mb-5">
                     The Association of Computing Students (ACS) at the University of Sri Jayewardenepura
                     is a vibrant community dedicated to fostering innovation, collaboration, and excellence
                     in computing. As a student-driven initiative under the Faculty of Computing, ACS
@@ -459,48 +456,44 @@ export default function HomePage() {
                   </p>
                 </Reveal>
                 <Reveal variant="fade-right" delayMs={240}>
-                  <p className="text-lg text-gray-500 leading-relaxed mb-8">
+                  <p className="text-base md:text-lg text-gray-500 leading-relaxed mb-8 hidden sm:block">
                     Through workshops, networking events, and collaborative projects, ACS empowers
                     students and cultivates future technology leaders — inspiring creativity and
                     practical learning.
                   </p>
                 </Reveal>
                 <Reveal variant="fade-right" delayMs={320}>
-                  <div className="grid grid-cols-2 gap-5">
-                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200">
-                      <span className="text-2xl font-bold text-[#19D1E6]">300+</span>
-                      <p className="text-sm text-gray-500 mt-1">Expected Attendees</p>
+                  <div className="grid grid-cols-2 gap-3 md:gap-5">
+                    <div className="p-4 md:p-5 rounded-2xl bg-gray-50 border border-gray-200">
+                      <span className="text-xl md:text-2xl font-bold text-[#19D1E6]">300+</span>
+                      <p className="text-xs md:text-sm text-gray-500 mt-1">Expected Attendees</p>
                     </div>
-                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200">
-                      <span className="text-2xl font-bold text-[#19D1E6]">4</span>
-                      <p className="text-sm text-gray-500 mt-1">Expert Speakers</p>
+                    <div className="p-4 md:p-5 rounded-2xl bg-gray-50 border border-gray-200">
+                      <span className="text-xl md:text-2xl font-bold text-[#19D1E6]">4</span>
+                      <p className="text-xs md:text-sm text-gray-500 mt-1">Expert Speakers</p>
                     </div>
-                    <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200">
-                      <span className="text-2xl font-bold text-[#19D1E6]">2025</span>
-                      <p className="text-sm text-gray-500 mt-1">Inaugural Year</p>
+                    <div className="p-4 md:p-5 rounded-2xl bg-gray-50 border border-gray-200">
+                      <span className="text-xl md:text-2xl font-bold text-[#19D1E6]">2025</span>
+                      <p className="text-xs md:text-sm text-gray-500 mt-1">Inaugural Year</p>
                     </div>
-                    <div className="p-5 rounded-2xl bg-[#19D1E6]/8 border border-[#19D1E6]/30">
-                      <span className="text-2xl font-bold text-[#19D1E6]">1</span>
-                      <p className="text-sm text-gray-500 mt-1">Action-Packed Day</p>
+                    <div className="p-4 md:p-5 rounded-2xl bg-[#19D1E6]/8 border border-[#19D1E6]/30">
+                      <span className="text-xl md:text-2xl font-bold text-[#19D1E6]">1</span>
+                      <p className="text-xs md:text-sm text-gray-500 mt-1">Action-Packed Day</p>
                     </div>
                   </div>
                 </Reveal>
               </div>
 
-              {/* Right: visual */}
-              <Reveal variant="fade-left">
-                <div className="relative">
-                  {/*
-                    IMAGE PLACEHOLDER — ACS_SECTION
-                    Replace: <ImgSlot label="ACS_SECTION" src="/acs-image.jpg" … />
-                  */}
+              {/* Right: visual — hidden on small screens to avoid layout overflow */}
+              <Reveal variant="fade-left" className="hidden lg:block">
+                <div className="relative pb-8 pr-8">
                   <ImgSlot
                     label="ACS_SECTION"
                     className="w-full aspect-square rounded-3xl"
                   />
-                  {/* Floating logo badge */}
-                  <div className="absolute -bottom-6 -right-6 p-5 rounded-2xl bg-white border border-gray-200 shadow-xl flex items-center gap-3">
-                    <img src={acsLogo} alt="ACS" className="h-10 w-10 object-contain" />
+                  {/* Floating logo badge — stays within the padded container */}
+                  <div className="absolute bottom-0 right-0 p-4 rounded-2xl bg-white border border-gray-200 shadow-xl flex items-center gap-3">
+                    <img src={acsLogo} alt="ACS" className="h-9 w-9 object-contain" />
                     <div>
                       <div className="font-bold text-gray-900 text-sm">ACS</div>
                       <div className="text-xs text-gray-500">Faculty of Computing</div>
@@ -512,12 +505,12 @@ export default function HomePage() {
           </div>
 
           {/* Marquee strip */}
-          <div className="mt-24 border-y border-gray-100 py-6 overflow-hidden">
-            <div className="animate-marquee-slow flex gap-16 whitespace-nowrap">
+          <div className="mt-12 md:mt-24 border-y border-gray-100 py-5 overflow-hidden">
+            <div className="animate-marquee-slow flex gap-12 whitespace-nowrap">
               {[...Array(2)].map((_, i) => (
-                <div key={i} className="flex shrink-0 gap-16">
+                <div key={i} className="flex shrink-0 gap-12">
                   {["INNOVATION", "COLLABORATION", "EXCELLENCE", "COMMUNITY", "GROWTH", "IMPACT"].map(t => (
-                    <span key={t} className="text-2xl font-bold text-[#19D1E6]/15 tracking-widest">{t} •</span>
+                    <span key={t} className="text-lg md:text-2xl font-bold text-[#19D1E6]/15 tracking-widest">{t} •</span>
                   ))}
                 </div>
               ))}
@@ -528,14 +521,14 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════
             COMMITTEE — dark section (portrait card layout)
             ═══════════════════════════════════════════════════ */}
-        <section id="contact" className="relative py-24 bg-[#0e0e0e] overflow-hidden scroll-mt-20">
+        <section id="contact" className="relative py-16 md:py-24 bg-[#0e0e0e] overflow-hidden scroll-mt-20">
           <div className="absolute inset-0 grid-pattern" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#19D1E6]/4 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
             {/* Left-aligned header */}
-            <div className="mb-14">
+            <div className="mb-10 md:mb-14">
               <Reveal variant="fade-up">
                 <div className="flex items-center gap-2 mb-4">
                   <span className="w-2 h-2 rounded-full bg-[#19D1E6]" />
@@ -543,7 +536,7 @@ export default function HomePage() {
                 </div>
               </Reveal>
               <Reveal variant="fade-up" delayMs={80}>
-                <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight tracking-tight mb-4">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight tracking-tight mb-4">
                   Meet the Organizing <span className="text-[#19D1E6]">Committee</span>
                 </h2>
               </Reveal>
@@ -563,8 +556,8 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Portrait card grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+            {/* Portrait card grid — 1 col on very small (Z Fold), 2 on ≥480px, 3 on md, 4 on lg */}
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
               {COMMITTEE.map((member, i) => (
                 <Reveal key={member.name} variant="fade-up" delayMs={i * 50}>
                   <div className="group rounded-2xl overflow-hidden border border-[#2a2a2a] bg-[#161616] hover:border-[#19D1E6]/40 transition-all duration-400 hover:-translate-y-1"
@@ -613,35 +606,42 @@ export default function HomePage() {
       {/* ═══════════════════════════════════════════════════
           FOOTER — dark
           ═══════════════════════════════════════════════════ */}
-      <footer className="relative bg-[#0e0e0e] pt-24 pb-8 overflow-hidden border-t border-[#2a2a2a]/30">
+      <footer className="relative bg-[#0e0e0e] pt-16 md:pt-24 pb-8 overflow-hidden border-t border-[#2a2a2a]/30">
         <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-[#19D1E6]/4 to-transparent pointer-events-none" />
-        <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* CTA */}
           <Reveal variant="fade-up">
-            <div className="text-center mb-20">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight text-white">
+            <div className="text-center mb-14 md:mb-20">
+              <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mb-5 tracking-tight text-white">
                 Ready to <span className="text-[#19D1E6]">Join Us?</span>
               </h2>
-              <p className="text-lg text-[#888888] max-w-2xl mx-auto mb-8">
+              <p className="text-base md:text-lg text-[#888888] max-w-2xl mx-auto mb-8">
                 Don't miss the most anticipated tech event of 2026. Secure your spot today.
               </p>
               <Link to="/register" data-cursor="Go"
-                className="inline-flex items-center gap-2 px-10 py-5 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-lg hover:bg-[#19D1E6]/90 transition-all hover:scale-105 glow">
+                className="inline-flex items-center gap-2 px-8 md:px-10 py-4 md:py-5 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-base md:text-lg hover:bg-[#19D1E6]/90 transition-all hover:scale-105 glow">
                 Register Now
                 <span className="material-symbols-outlined text-[1.1rem]">arrow_forward</span>
               </Link>
             </div>
           </Reveal>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-            <div className="col-span-2 md:col-span-1">
+          {/* Footer links — 3 columns (Opportunities removed) */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mb-12">
+
+            {/* Brand */}
+            <div>
               <div className="flex items-center gap-2 mb-4">
                 <img src={nexaLogo} alt="NEXA" className="h-7 w-7 object-contain" />
                 <span className="text-xl font-bold text-[#19D1E6]">NEXA</span>
               </div>
-              <p className="text-[#888888] text-sm leading-relaxed">
+              <p className="text-[#888888] text-sm leading-relaxed max-w-xs">
                 Building Tomorrow's Leaders. The premier one-day tech talk series for students and professionals.
               </p>
             </div>
+
+            {/* Summit links */}
             <div>
               <h4 className="font-semibold text-white mb-4 text-sm">Summit</h4>
               <ul className="space-y-3">
@@ -650,30 +650,27 @@ export default function HomePage() {
                 ))}
               </ul>
             </div>
-            <div>
-              <h4 className="font-semibold text-white mb-4 text-sm">Opportunities</h4>
-              <ul className="space-y-3">
-                {[["Volunteer", "#contact"], ["Speak", "#contact"], ["Partner", "#contact"]].map(([l, h]) => (
-                  <li key={l}><a href={h} className="text-[#888888] text-sm hover:text-[#19D1E6] transition-colors">{l}</a></li>
-                ))}
-              </ul>
-            </div>
+
+            {/* Contact */}
             <div>
               <h4 className="font-semibold text-white mb-4 text-sm">Contact</h4>
               <ul className="space-y-3">
-                <li className="flex items-center gap-2 text-[#888888] text-sm">
-                  <span className="material-symbols-outlined text-[#19D1E6] text-base">mail</span>
-                  nexa.acs.sjp@gmail.com
+                <li>
+                  <a href="mailto:nexa.acs.sjp@gmail.com"
+                    className="flex items-center gap-2 text-[#888888] text-sm hover:text-[#19D1E6] transition-colors">
+                    <span className="material-symbols-outlined text-[#19D1E6] text-base shrink-0">mail</span>
+                    nexa.acs.sjp@gmail.com
+                  </a>
                 </li>
                 <li className="flex items-start gap-2 text-[#888888] text-sm">
-                  <span className="material-symbols-outlined text-[#19D1E6] text-base mt-0.5">location_on</span>
+                  <span className="material-symbols-outlined text-[#19D1E6] text-base mt-0.5 shrink-0">location_on</span>
                   <span>University of Sri Jayewardenepura<br />Sri Lanka</span>
                 </li>
               </ul>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-[#2a2a2a]/30 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="pt-8 border-t border-[#2a2a2a]/30 flex flex-col sm:flex-row justify-between items-center gap-3 text-center">
             <p className="text-[#888888] text-sm">© 2026 NEXA · ACS SJP. All rights reserved.</p>
             <p className="text-[#888888] text-sm">Crafted with <span className="text-[#19D1E6]">♥</span> by the ACS Team</p>
           </div>

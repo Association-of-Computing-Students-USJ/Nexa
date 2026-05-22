@@ -26,30 +26,30 @@ export default function EventSessions({ sectionClassName = "", includeAnchorId =
       {/* Subtle top glow */}
       <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-[#19D1E6]/5 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-10 md:mb-16">
           <Reveal variant="fade-up">
             <span className="text-[#19D1E6] font-semibold tracking-wider uppercase text-sm">Featured Sessions</span>
           </Reveal>
           <Reveal variant="fade-up" delayMs={80}>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mt-4 mb-6 leading-tight tracking-tight text-white">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mt-4 mb-4 md:mb-6 leading-tight tracking-tight text-white">
               Learn from the
               <span className="text-[#19D1E6]"> Best</span>
             </h2>
           </Reveal>
           <Reveal variant="fade-up" delayMs={160}>
-            <p className="text-lg text-[#888888] max-w-2xl mx-auto leading-relaxed">
+            <p className="text-sm sm:text-base md:text-lg text-[#888888] max-w-2xl mx-auto leading-relaxed">
               Carefully curated sessions covering the most impactful topics in technology today.
             </p>
           </Reveal>
         </div>
 
-        {/* Session cards — 2-col on md */}
-        <div className="grid md:grid-cols-2 gap-6">
+        {/* Session cards — 1-col on mobile, 2-col on md */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {SESSION_CARDS.map((card, index) => (
             <Reveal key={card.title} variant="fade-up" delayMs={index * 80}>
-              <div className="group relative h-full p-8 rounded-3xl bg-[#161616] border border-[#2a2a2a]/50 hover:border-[#19D1E6]/50 transition-all duration-500 overflow-hidden hover:-translate-y-1.5">
+              <div className="group relative h-full p-5 md:p-8 rounded-3xl bg-[#161616] border border-[#2a2a2a]/50 hover:border-[#19D1E6]/50 transition-all duration-500 overflow-hidden hover:-translate-y-1.5">
                 {/* Hover gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#19D1E6]/8 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
@@ -59,7 +59,7 @@ export default function EventSessions({ sectionClassName = "", includeAnchorId =
                     <div className="p-4 rounded-2xl bg-[#19D1E6]/10 text-[#19D1E6] group-hover:bg-[#19D1E6] group-hover:text-[#0e0e0e] transition-all duration-300">
                       <span className="material-symbols-outlined text-2xl">{SESSION_ICONS[index] ?? "school"}</span>
                     </div>
-                    <span className="text-6xl font-bold text-[#2a2a2a] group-hover:text-[#19D1E6]/20 transition-colors select-none">
+                    <span className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#2a2a2a] group-hover:text-[#19D1E6]/20 transition-colors select-none">
                       {String(index + 1).padStart(2, "0")}
                     </span>
                   </div>
