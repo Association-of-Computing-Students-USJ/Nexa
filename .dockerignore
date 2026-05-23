@@ -15,4 +15,3 @@ build
 README*
 LICENSE
 client/dist
-server/prisma/migrations

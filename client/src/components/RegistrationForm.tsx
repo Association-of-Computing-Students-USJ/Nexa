@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -206,20 +206,54 @@ export default function RegistrationForm() {
     setApiError("");
 
     try {
-      // Save registration document
+      // ── Email uniqueness check ────────────────────────────────────────────
+      try {
+        const emailQuery = query(
+          collection(db, "registrations"),
+          where("email", "==", fields.email.toLowerCase().trim())
+        );
+        const emailSnap = await getDocs(emailQuery);
+        if (!emailSnap.empty) {
+          setErrors({ email: "This email is already registered." });
+          setStatus("error");
+          return;
+        }
+      } catch {
+        // If read is denied by Firestore rules, proceed — the write-side
+        // uniqueness constraint (or rules) will be the final enforcement.
+      }
+
+      // ── Save registration document ─────────────────────────────────────
       const docRef = await addDoc(collection(db, "registrations"), {
         ...fields,
+        email: fields.email.toLowerCase().trim(),
         registeredAt: serverTimestamp(),
+        attended: false,
+        attendedAt: null,
+        mealServed: false,
+        mealServedAt: null,
+        emailStatus: "pending",
       });
 
-      // Trigger email via Trigger Email Firebase extension
-      await addDoc(collection(db, "mail"), {
-        to: fields.email,
-        message: {
-          subject: "🎉 You're Registered for NEXA 2026!",
-          html: buildEmailHtml({ ...fields, id: docRef.id }),
-        },
-      });
+      // ── Send confirmation email ────────────────────────────────────────
+      let emailSent = false;
+      try {
+        await addDoc(collection(db, "mail"), {
+          to: fields.email,
+          message: {
+            subject: "🎉 You're Registered for NEXA 2026!",
+            html: buildEmailHtml({ ...fields, id: docRef.id }),
+          },
+        });
+        emailSent = true;
+      } catch (emailErr) {
+        console.warn("Email queuing failed, flagged for retry:", emailErr);
+      }
+
+      // Update emailStatus based on whether email was queued successfully
+      if (emailSent) {
+        await updateDoc(docRef, { emailStatus: "sent" }).catch(() => {});
+      }
 
       navigate("/ticket", { state: { ticket: { ...fields, id: docRef.id } } });
     } catch (err: unknown) {

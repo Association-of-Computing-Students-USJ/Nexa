@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../lib/firebase";
 import nexaLogo from "../assets/images/logo/NEXA Colour.png";
 import CustomCursor from "../components/CustomCursor";
+import { ensureFirebaseAuth } from "../lib/firebaseAuth";
 import { ADMIN_SESSION_KEY } from "../pages/admin/AdminLoginPage";
-
-const ADMIN_FIREBASE_EMAIL = import.meta.env.VITE_ADMIN_FIREBASE_EMAIL as string;
-const ADMIN_FIREBASE_PASS  = import.meta.env.VITE_ADMIN_FIREBASE_PASS  as string;
 
 const NAV_ITEMS = [
   { icon: "group",            label: "Participants", path: "/admin/dashboard" },
@@ -24,20 +20,12 @@ export default function AdminLayout() {
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
-  // Ensure Firebase is signed in. Wait for the SDK to restore its cached session
-  // first (onAuthStateChanged fires once with null then with the user if cached).
-  // Only call signInWithEmailAndPassword if still unauthenticated after restoration.
+  // Restore Firebase Auth session for Firestore reads/writes (sole backend)
   useEffect(() => {
-    if (!isAuth || !ADMIN_FIREBASE_EMAIL || !ADMIN_FIREBASE_PASS) return;
-
-    const unsub = onAuthStateChanged(auth, (user) => {
-      unsub(); // only need the first event
-      if (user) return; // already signed in from cached session
-      signInWithEmailAndPassword(auth, ADMIN_FIREBASE_EMAIL, ADMIN_FIREBASE_PASS)
-        .catch(err => console.error("[Admin] Firebase sign-in failed:", err.code, err.message));
-    });
-
-    return unsub;
+    if (!isAuth) return;
+    ensureFirebaseAuth().catch((err) =>
+      console.error("[Admin] Firebase auth failed:", err)
+    );
   }, [isAuth]);
 
   if (!isAuth) return <Navigate to="/admin/login" replace />;

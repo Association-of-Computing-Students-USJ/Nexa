@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import nexaLogo from "../assets/images/logo/NEXA Colour.png";
 import CustomCursor from "../components/CustomCursor";

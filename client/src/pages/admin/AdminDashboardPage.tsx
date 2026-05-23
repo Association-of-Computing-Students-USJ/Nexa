@@ -8,8 +8,8 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
-import { db, auth } from "../../lib/firebase";
+import { db } from "../../lib/firebase";
+import { ensureFirebaseAuth } from "../../lib/firebaseAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,6 +24,9 @@ interface Participant {
   registeredAt: Timestamp | null;
   attended: boolean;
   attendedAt: Timestamp | null;
+  mealServed: boolean;
+  mealServedAt: Timestamp | null;
+  emailStatus?: "sent" | "pending";
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -45,11 +48,11 @@ function isToday(ts: Timestamp | null): boolean {
 }
 
 function exportCSV(rows: Participant[]) {
-  const header = ["Name", "Email", "Phone", "WhatsApp", "University", "Year", "Registered At", "Attended", "Attended At"];
+  const header = ["Name", "Email", "Phone", "WhatsApp", "University", "Year", "Registered At", "Entry Attended", "Attended At", "Meal Served", "Meal Served At"];
   const lines = [
     header.join(","),
     ...rows.map(r =>
-      [r.name, r.email, r.phone, r.whatsapp, r.university, r.year, fmtDate(r.registeredAt), r.attended ? "Yes" : "No", fmtDate(r.attendedAt)]
+      [r.name, r.email, r.phone, r.whatsapp, r.university, r.year, fmtDate(r.registeredAt), r.attended ? "Yes" : "No", fmtDate(r.attendedAt), r.mealServed ? "Yes" : "No", fmtDate(r.mealServedAt)]
         .map(v => `"${String(v).replace(/"/g, '""')}"`)
         .join(",")
     ),
@@ -122,14 +125,16 @@ function DeleteModal({ name, onConfirm, onCancel }: {
 
 function DetailDrawer({ p, onClose }: { p: Participant; onClose: () => void }) {
   const fields = [
-    { icon: "person", label: "Full Name", value: p.name },
-    { icon: "mail", label: "Email", value: p.email },
-    { icon: "phone", label: "Phone", value: p.phone },
-    { icon: "chat", label: "WhatsApp", value: p.whatsapp },
-    { icon: "school", label: "University", value: p.university },
-    { icon: "calendar_today", label: "Academic Year", value: p.year },
-    { icon: "schedule", label: "Registered At", value: fmtDate(p.registeredAt) },
-    { icon: "badge", label: "Ticket ID", value: p.id.slice(0, 12).toUpperCase() },
+    { icon: "person",        label: "Full Name",       value: p.name },
+    { icon: "mail",          label: "Email",           value: p.email },
+    { icon: "phone",         label: "Phone",           value: p.phone },
+    { icon: "chat",          label: "WhatsApp",        value: p.whatsapp },
+    { icon: "school",        label: "University",      value: p.university },
+    { icon: "calendar_today",label: "Academic Year",   value: p.year },
+    { icon: "schedule",      label: "Registered At",   value: fmtDate(p.registeredAt) },
+    { icon: "badge",         label: "Ticket ID",       value: p.id.slice(0, 12).toUpperCase() },
+    { icon: "how_to_reg",    label: "Entry Check-In",  value: p.attended ? `✓ ${fmtDate(p.attendedAt)}` : "Not checked in" },
+    { icon: "restaurant",    label: "Meal Status",     value: p.mealServed ? `✓ ${fmtDate(p.mealServedAt)}` : "Not served" },
   ];
 
   return (
@@ -187,37 +192,37 @@ export default function AdminDashboardPage() {
   const [detailTarget, setDetailTarget] = useState<Participant | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Wait for Firebase auth then start real-time listener
+  // Firebase is the sole backend — authenticate then subscribe to registrations
   useEffect(() => {
     let unsubSnap: (() => void) | null = null;
+    let active = true;
 
-    const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (unsubSnap) { unsubSnap(); unsubSnap = null; }
-
-      if (!user) {
+    ensureFirebaseAuth()
+      .then(() => {
+        if (!active) return;
+        setFirestoreError("");
+        setLoading(true);
+        const q = query(collection(db, "registrations"), orderBy("registeredAt", "desc"));
+        unsubSnap = onSnapshot(
+          q,
+          (snap) => {
+            setParticipants(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Participant, "id">) })));
+            setLoading(false);
+          },
+          (err) => {
+            setFirestoreError(`Firestore error: ${err.code} — ${err.message}`);
+            setLoading(false);
+          }
+        );
+      })
+      .catch(() => {
+        if (!active) return;
         setFirestoreError("Not signed into Firebase. Please log out and log back in to the admin portal.");
         setLoading(false);
-        return;
-      }
-
-      setFirestoreError("");
-      setLoading(true);
-      const q = query(collection(db, "registrations"), orderBy("registeredAt", "desc"));
-      unsubSnap = onSnapshot(
-        q,
-        snap => {
-          setParticipants(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Participant, "id">) })));
-          setLoading(false);
-        },
-        (err) => {
-          setFirestoreError(`Firestore error: ${err.code} — ${err.message}`);
-          setLoading(false);
-        }
-      );
-    });
+      });
 
     return () => {
-      unsubAuth();
+      active = false;
       if (unsubSnap) unsubSnap();
     };
   }, []);
@@ -226,6 +231,7 @@ export default function AdminDashboardPage() {
   const todayCount = useMemo(() => participants.filter(p => isToday(p.registeredAt)).length, [participants]);
   const universities = useMemo(() => new Set(participants.map(p => p.university)).size, [participants]);
   const attendedCount = useMemo(() => participants.filter(p => p.attended).length, [participants]);
+  const mealServedCount = useMemo(() => participants.filter(p => p.mealServed).length, [participants]);
   const years = useMemo(() => ["All", ...Array.from(new Set(participants.map(p => p.year))).sort()], [participants]);
 
   // Filtered rows
@@ -287,11 +293,12 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard icon="group" label="Total Registered" value={participants.length} accent />
-          <StatCard icon="how_to_reg" label="Attended" value={attendedCount} />
-          <StatCard icon="today" label="Registered Today" value={todayCount} />
-          <StatCard icon="school" label="Universities" value={universities} />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <StatCard icon="group"      label="Total Registered"  value={participants.length} accent />
+          <StatCard icon="how_to_reg" label="Entry Attended"    value={attendedCount} />
+          <StatCard icon="restaurant" label="Meals Served"      value={mealServedCount} />
+          <StatCard icon="today"      label="Registered Today"  value={todayCount} />
+          <StatCard icon="school"     label="Universities"      value={universities} />
         </div>
 
         {/* Filters */}
@@ -360,7 +367,7 @@ export default function AdminDashboardPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[#2a2a2a]">
-                      {["Name", "Email", "Phone", "University", "Year", "Registered", "Status", ""].map(h => (
+                      {["Name", "Email", "Phone", "University", "Year", "Registered", "Entry", "Meal", ""].map(h => (
                         <th key={h} className="text-left text-[#555] text-xs font-semibold uppercase tracking-wider px-5 py-3">
                           {h}
                         </th>
@@ -397,6 +404,19 @@ export default function AdminDashboardPage() {
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full whitespace-nowrap">
                               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
                               Attended
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-[#2a2a2a] text-[#555] rounded-full whitespace-nowrap">
+                              <span className="w-1.5 h-1.5 bg-[#555] rounded-full" />
+                              Pending
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {p.mealServed ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full whitespace-nowrap">
+                              <span className="w-1.5 h-1.5 bg-orange-400 rounded-full" />
+                              Served
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-[#2a2a2a] text-[#555] rounded-full whitespace-nowrap">
@@ -447,9 +467,14 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <span className="px-2 py-0.5 text-[10px] font-medium bg-[#19D1E6]/8 text-[#19D1E6] border border-[#19D1E6]/20 rounded-full">{p.year}</span>
                         {p.attended ? (
-                          <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">Attended</span>
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">Entry ✓</span>
                         ) : (
-                          <span className="px-2 py-0.5 text-[10px] font-medium bg-[#2a2a2a] text-[#555] rounded-full">Pending</span>
+                          <span className="px-2 py-0.5 text-[10px] font-medium bg-[#2a2a2a] text-[#555] rounded-full">No Entry</span>
+                        )}
+                        {p.mealServed ? (
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full">Meal ✓</span>
+                        ) : (
+                          <span className="px-2 py-0.5 text-[10px] font-medium bg-[#2a2a2a] text-[#555] rounded-full">No Meal</span>
                         )}
                         <span className="text-[#555] text-[11px] truncate">{p.university}</span>
                       </div>
