@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
 import CustomCursor from "../../components/CustomCursor";
-import { ensureFirebaseAuth } from "../../lib/firebaseAuth";
+import { auth } from "../../lib/firebase";
 
-const ADMIN_USER = import.meta.env.VITE_ADMIN_USERNAME as string;
-const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASSWORD as string;
 export const ADMIN_SESSION_KEY = "nexa_admin_auth";
 
 export default function AdminLoginPage() {
   const navigate = useNavigate();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
@@ -28,18 +27,12 @@ export default function AdminLoginPage() {
     setError("");
     setLoading(true);
 
-    if (username !== ADMIN_USER || password !== ADMIN_PASS) {
-      setError("Invalid username or password.");
-      setLoading(false);
-      return;
-    }
-
     try {
-      await ensureFirebaseAuth();
+      await signInWithEmailAndPassword(auth, email, password);
       sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
       navigate("/admin/dashboard", { replace: true });
     } catch {
-      setError("Firebase sign-in failed. Check VITE_ADMIN_FIREBASE_EMAIL / PASS in .env");
+      setError("Firebase sign-in failed. Check your email/password and ensure Email/Password auth is enabled.");
       setLoading(false);
     }
   }
@@ -70,22 +63,22 @@ export default function AdminLoginPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit} noValidate className="space-y-4">
-              {/* Username */}
+              {/* Email */}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="username" className="text-xs font-semibold text-[#888] uppercase tracking-wider">
-                  Username
+                <label htmlFor="email" className="text-xs font-semibold text-[#888] uppercase tracking-wider">
+                  Email
                 </label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#444] text-base pointer-events-none">
-                    person
+                    email
                   </span>
                   <input
-                    id="username"
+                    id="email"
                     type="text"
-                    value={username}
-                    onChange={e => { setUsername(e.target.value); setError(""); }}
-                    placeholder="Enter username"
-                    autoComplete="username"
+                    value={email}
+                    onChange={e => { setEmail(e.target.value); setError(""); }}
+                    placeholder="Enter email"
+                    autoComplete="email"
                     className="w-full bg-[#0e0e0e] border border-[#2a2a2a] text-white rounded-xl pl-10 pr-4 py-3 text-sm placeholder-[#444] focus:outline-none focus:ring-2 focus:ring-[#19D1E6]/30 focus:border-[#19D1E6]/60 transition-colors"
                   />
                 </div>
@@ -133,7 +126,7 @@ export default function AdminLoginPage() {
               {/* Submit */}
               <button
                 type="submit"
-                disabled={loading || !username || !password}
+                disabled={loading || !email || !password}
                 className="w-full py-3.5 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-xl hover:bg-[#19D1E6]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm mt-2"
               >
                 {loading ? (
