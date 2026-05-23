@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../../lib/firebase";
 import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
 import CustomCursor from "../../components/CustomCursor";
 
 const ADMIN_USER = import.meta.env.VITE_ADMIN_USERNAME as string;
 const ADMIN_PASS = import.meta.env.VITE_ADMIN_PASSWORD as string;
+const ADMIN_FIREBASE_EMAIL = import.meta.env.VITE_ADMIN_FIREBASE_EMAIL as string;
+const ADMIN_FIREBASE_PASS  = import.meta.env.VITE_ADMIN_FIREBASE_PASS  as string;
 export const ADMIN_SESSION_KEY = "nexa_admin_auth";
 
 export default function AdminLoginPage() {
@@ -22,21 +26,28 @@ export default function AdminLoginPage() {
     }
   }, [navigate]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // Simulate a brief auth delay for UX
-    setTimeout(() => {
-      if (username === ADMIN_USER && password === ADMIN_PASS) {
-        sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
-        navigate("/admin/dashboard", { replace: true });
-      } else {
-        setError("Invalid username or password.");
-        setLoading(false);
+    if (username !== ADMIN_USER || password !== ADMIN_PASS) {
+      setError("Invalid username or password.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Sign into Firebase so Firestore rules (request.auth != null) are satisfied
+      if (ADMIN_FIREBASE_EMAIL && ADMIN_FIREBASE_PASS) {
+        await signInWithEmailAndPassword(auth, ADMIN_FIREBASE_EMAIL, ADMIN_FIREBASE_PASS);
       }
-    }, 600);
+      sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+      navigate("/admin/dashboard", { replace: true });
+    } catch {
+      setError("Firebase sign-in failed. Check VITE_ADMIN_FIREBASE_EMAIL / PASS in .env");
+      setLoading(false);
+    }
   }
 
   return (

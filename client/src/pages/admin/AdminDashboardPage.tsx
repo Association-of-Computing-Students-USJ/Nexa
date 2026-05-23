@@ -8,7 +8,8 @@ import {
   orderBy,
   Timestamp,
 } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { db, auth } from "../../lib/firebase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -179,25 +180,46 @@ function DetailDrawer({ p, onClose }: { p: Participant; onClose: () => void }) {
 export default function AdminDashboardPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [firestoreError, setFirestoreError] = useState("");
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState("All");
   const [deleteTarget, setDeleteTarget] = useState<Participant | null>(null);
   const [detailTarget, setDetailTarget] = useState<Participant | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Real-time listener
+  // Wait for Firebase auth then start real-time listener
   useEffect(() => {
-    const q = query(collection(db, "registrations"), orderBy("registeredAt", "desc"));
-    const unsub = onSnapshot(q, snap => {
-      setParticipants(
-        snap.docs.map(d => ({
-          id: d.id,
-          ...(d.data() as Omit<Participant, "id">),
-        }))
+    let unsubSnap: (() => void) | null = null;
+
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubSnap) { unsubSnap(); unsubSnap = null; }
+
+      if (!user) {
+        setFirestoreError("Not signed into Firebase. Please log out and log back in to the admin portal.");
+        setLoading(false);
+        return;
+      }
+
+      setFirestoreError("");
+      setLoading(true);
+      const q = query(collection(db, "registrations"), orderBy("registeredAt", "desc"));
+      unsubSnap = onSnapshot(
+        q,
+        snap => {
+          setParticipants(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Participant, "id">) })));
+          setLoading(false);
+        },
+        (err) => {
+          setFirestoreError(`Firestore error: ${err.code} — ${err.message}`);
+          setLoading(false);
+        }
       );
-      setLoading(false);
-    }, () => setLoading(false));
-    return unsub;
+    });
+
+    return () => {
+      unsubAuth();
+      if (unsubSnap) unsubSnap();
+    };
   }, []);
 
   // Derived stats
@@ -239,6 +261,15 @@ export default function AdminDashboardPage() {
       )}
 
       <div className="space-y-6">
+
+        {/* Auth/Firestore error banner */}
+        {firestoreError && (
+          <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <span className="material-symbols-outlined text-red-400 text-base mt-0.5 shrink-0">error</span>
+            <p className="text-red-400 text-sm font-mono break-all">{firestoreError}</p>
+          </div>
+        )}
+
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>

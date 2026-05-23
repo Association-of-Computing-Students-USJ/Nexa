@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect } from "react";
-import QRCodeStyling from "qr-code-styling";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import nexaLogo from "../assets/images/logo/NEXA Colour.png";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -114,125 +113,6 @@ function buildEmailHtml(t: TicketData): string {
 </html>`;
 }
 
-// ─── Ticket Modal ─────────────────────────────────────────────────────────────
-
-function TicketModal({ ticket, onClose }: { ticket: TicketData; onClose: () => void }) {
-  const qrContainerRef = useRef<HTMLDivElement>(null);
-  const qrInstanceRef = useRef<QRCodeStyling | null>(null);
-
-  useEffect(() => {
-    const container = qrContainerRef.current;
-    if (!container) return;
-    container.innerHTML = "";
-
-    const qr = new QRCodeStyling({
-      width: 168,
-      height: 168,
-      type: "canvas",
-      data: `NEXA-2026-${ticket.id}`,
-      dotsOptions: { color: "#19D1E6", type: "rounded" },
-      backgroundOptions: { color: "#0e0e0e" },
-      cornersSquareOptions: { type: "extra-rounded", color: "#19D1E6" },
-      cornersDotOptions: { color: "#0ea5e9" },
-      qrOptions: { errorCorrectionLevel: "M" },
-    });
-
-    qr.append(container);
-    qrInstanceRef.current = qr;
-  }, [ticket.id]);
-
-  const handleDownload = () => {
-    qrInstanceRef.current?.download({
-      name: `nexa-2026-ticket-${ticket.id.slice(0, 8)}`,
-      extension: "png",
-    });
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      {/* Sheet slides up from bottom on mobile, centered modal on sm+ */}
-      <div
-        className="relative bg-[#161616] border border-[#2a2a2a] rounded-t-3xl sm:rounded-3xl overflow-hidden w-full sm:max-w-sm shadow-2xl max-h-[92dvh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Top accent bar */}
-        <div className="h-1 w-full bg-gradient-to-r from-[#19D1E6] via-[#0ea5e9] to-[#19D1E6]" />
-
-        {/* Drag handle on mobile */}
-        <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-10 h-1 bg-[#2a2a2a] rounded-full" />
-        </div>
-
-        {/* Header */}
-        <div className="px-5 sm:px-8 pt-4 sm:pt-8 pb-4 sm:pb-6 text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#19D1E6]/10 border border-[#19D1E6]/20 mb-4 sm:mb-5">
-            <span className="material-symbols-outlined text-[#19D1E6] text-sm">check_circle</span>
-            <span className="text-[#19D1E6] text-xs font-semibold tracking-wider uppercase">
-              Registration Confirmed
-            </span>
-          </div>
-          <img src={nexaLogo} alt="NEXA" className="h-9 sm:h-10 mx-auto mb-3 sm:mb-4 object-contain" />
-          <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 break-words">{ticket.name}</h2>
-          <p className="text-[#888] text-sm">
-            {ticket.university} &middot; {ticket.year}
-          </p>
-        </div>
-
-        <div className="mx-5 sm:mx-8 border-t border-dashed border-[#2a2a2a]" />
-
-        {/* QR code */}
-        <div className="px-5 sm:px-8 py-5 sm:py-6 flex flex-col items-center">
-          <div className="p-3 bg-[#0e0e0e] rounded-2xl border border-[#2a2a2a]">
-            <div ref={qrContainerRef} />
-          </div>
-          <p className="mt-3 text-[#555] text-[11px] font-mono tracking-widest">
-            {ticket.id.slice(0, 8).toUpperCase()}···{ticket.id.slice(-4).toUpperCase()}
-          </p>
-        </div>
-
-        <div className="mx-5 sm:mx-8 border-t border-dashed border-[#2a2a2a]" />
-
-        {/* Event info grid */}
-        <div className="px-5 sm:px-8 py-4 sm:py-5 grid grid-cols-2 gap-y-3">
-          {[
-            { label: "Date", value: "June 2026" },
-            { label: "Venue", value: "USJP, Sri Lanka" },
-            { label: "Access", value: "All-Access Pass" },
-            { label: "Email sent to", value: ticket.email, accent: true },
-          ].map((item) => (
-            <div key={item.label}>
-              <p className="text-[#555] text-[10px] uppercase tracking-wider mb-0.5">{item.label}</p>
-              <p className={`text-xs font-medium break-all ${item.accent ? "text-[#19D1E6]" : "text-white"}`}>
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Actions */}
-        <div className="px-5 sm:px-8 pb-6 sm:pb-8 flex gap-3">
-          <button
-            onClick={handleDownload}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-xl hover:bg-[#19D1E6]/90 transition-colors text-sm"
-          >
-            <span className="material-symbols-outlined text-base">download</span>
-            Save QR
-          </button>
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 border border-[#2a2a2a] text-[#888] font-medium rounded-xl hover:border-[#444] hover:text-white transition-colors text-sm"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Field Component ──────────────────────────────────────────────────────────
 
 function Field({
@@ -291,11 +171,11 @@ const EMPTY: FormFields = {
 };
 
 export default function RegistrationForm() {
+  const navigate = useNavigate();
   const [fields, setFields] = useState<FormFields>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Partial<Record<keyof FormFields, boolean>>>({});
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
-  const [ticket, setTicket] = useState<TicketData | null>(null);
   const [apiError, setApiError] = useState("");
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
@@ -341,19 +221,21 @@ export default function RegistrationForm() {
         },
       });
 
-      setTicket({ ...fields, id: docRef.id });
-      setStatus("idle");
-    } catch (err) {
+      navigate("/ticket", { state: { ticket: { ...fields, id: docRef.id } } });
+    } catch (err: unknown) {
       console.error("Registration error:", err);
-      setApiError("Something went wrong. Please try again or contact nexa.acs.sjp@gmail.com");
+      const code = (err as { code?: string })?.code;
+      const msg =
+        code === "permission-denied"
+          ? "Permission denied — Firestore rules are blocking this write. Please update your Firebase security rules."
+          : `Something went wrong${code ? ` (${code})` : ""}. Please try again or contact nexa.acs.sjp@gmail.com`;
+      setApiError(msg);
       setStatus("error");
     }
   }
 
   return (
     <>
-      {ticket && <TicketModal ticket={ticket} onClose={() => setTicket(null)} />}
-
       <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
           <Field

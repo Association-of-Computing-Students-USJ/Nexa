@@ -3,6 +3,7 @@ import PublicLayout from "./layouts/PublicLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import HomePage from "./pages/public/HomePage";
 import RegisterPage from "./pages/public/RegisterPage";
+import TicketPage from "./pages/public/TicketPage";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminScannerPage from "./pages/admin/AdminScannerPage";
@@ -14,6 +15,7 @@ export default function App() {
       <Route element={<PublicLayout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/ticket" element={<TicketPage />} />
       </Route>
 
       {/* ── Admin routes ──────────────────────────────────── */}
