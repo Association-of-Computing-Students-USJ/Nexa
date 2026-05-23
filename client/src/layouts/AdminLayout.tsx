@@ -24,17 +24,20 @@ export default function AdminLayout() {
   // Close sidebar on route change
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
-  // Ensure Firebase is signed in (handles page refresh where session exists but Firebase auth was lost)
+  // Ensure Firebase is signed in. Wait for the SDK to restore its cached session
+  // first (onAuthStateChanged fires once with null then with the user if cached).
+  // Only call signInWithEmailAndPassword if still unauthenticated after restoration.
   useEffect(() => {
-    if (!isAuth) return;
-    if (auth.currentUser) return;
-    if (ADMIN_FIREBASE_EMAIL && ADMIN_FIREBASE_PASS) {
+    if (!isAuth || !ADMIN_FIREBASE_EMAIL || !ADMIN_FIREBASE_PASS) return;
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      unsub(); // only need the first event
+      if (user) return; // already signed in from cached session
       signInWithEmailAndPassword(auth, ADMIN_FIREBASE_EMAIL, ADMIN_FIREBASE_PASS)
-        .then(u => console.log("[Admin] Firebase signed in as", u.user.email))
-        .catch(err => console.error("[Admin] Firebase sign-in FAILED:", err.code, err.message));
-    } else {
-      console.warn("[Admin] VITE_ADMIN_FIREBASE_EMAIL or VITE_ADMIN_FIREBASE_PASS is not set in .env");
-    }
+        .catch(err => console.error("[Admin] Firebase sign-in failed:", err.code, err.message));
+    });
+
+    return unsub;
   }, [isAuth]);
 
   if (!isAuth) return <Navigate to="/admin/login" replace />;
@@ -67,7 +70,7 @@ export default function AdminLayout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors ${
                   active
                     ? "bg-[#19D1E6]/10 text-[#19D1E6] border border-[#19D1E6]/20"
                     : "text-[#888] hover:text-white hover:bg-[#1a1a1a]"
@@ -85,14 +88,14 @@ export default function AdminLayout() {
           <Link
             to="/"
             target="_blank"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[#888] hover:text-white hover:bg-[#1a1a1a] transition-colors"
+            className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-[#888] hover:text-white hover:bg-[#1a1a1a] transition-colors"
           >
             <span className="material-symbols-outlined text-base">open_in_new</span>
             View Site
           </Link>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[#888] hover:text-red-400 hover:bg-red-500/5 transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-[#888] hover:text-red-400 hover:bg-red-500/5 transition-colors"
           >
             <span className="material-symbols-outlined text-base">logout</span>
             Sign Out
@@ -118,7 +121,7 @@ export default function AdminLayout() {
               <p className="text-[#555] text-xs">Management Portal</p>
             </div>
           </div>
-          <button onClick={() => setSidebarOpen(false)} className="p-1.5 text-[#555] hover:text-white transition-colors">
+          <button onClick={() => setSidebarOpen(false)} className="p-2.5 text-[#555] hover:text-white transition-colors">
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
@@ -126,7 +129,7 @@ export default function AdminLayout() {
           {NAV_ITEMS.map(item => {
             const active = location.pathname === item.path;
             return (
-              <Link key={item.path} to={item.path} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              <Link key={item.path} to={item.path} className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors ${
                 active ? "bg-[#19D1E6]/10 text-[#19D1E6] border border-[#19D1E6]/20" : "text-[#888] hover:text-white hover:bg-[#1a1a1a]"
               }`}>
                 <span className="material-symbols-outlined text-base">{item.icon}</span>
@@ -136,11 +139,11 @@ export default function AdminLayout() {
           })}
         </nav>
         <div className="px-3 pb-5 border-t border-[#1e1e1e] pt-4 space-y-1">
-          <Link to="/" target="_blank" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[#888] hover:text-white hover:bg-[#1a1a1a] transition-colors">
+          <Link to="/" target="_blank" className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-[#888] hover:text-white hover:bg-[#1a1a1a] transition-colors">
             <span className="material-symbols-outlined text-base">open_in_new</span>
             View Site
           </Link>
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-[#888] hover:text-red-400 hover:bg-red-500/5 transition-colors">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm text-[#888] hover:text-red-400 hover:bg-red-500/5 transition-colors">
             <span className="material-symbols-outlined text-base">logout</span>
             Sign Out
           </button>
@@ -155,7 +158,7 @@ export default function AdminLayout() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="md:hidden p-1.5 text-[#555] hover:text-white transition-colors shrink-0"
+            className="md:hidden p-2.5 text-[#555] hover:text-white transition-colors shrink-0"
           >
             <span className="material-symbols-outlined text-xl">menu</span>
           </button>
@@ -177,7 +180,7 @@ export default function AdminLayout() {
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 text-[#555] hover:text-red-400 transition-colors"
+              className="p-2.5 text-[#555] hover:text-red-400 transition-colors"
               title="Sign out"
             >
               <span className="material-symbols-outlined text-base">logout</span>

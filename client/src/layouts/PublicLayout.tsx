@@ -7,6 +7,12 @@ export default function PublicLayout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
   // The landing page manages its own full-bleed nav/footer/cursor.
   if (location.pathname === "/") return <Outlet />;
 
@@ -44,7 +50,7 @@ export default function PublicLayout() {
           {/* Mobile hamburger */}
           <button
             type="button"
-            className="md:hidden p-2 text-gray-700 hover:text-[#19D1E6] transition-colors"
+            className="md:hidden p-3 text-gray-700 hover:text-[#19D1E6] transition-colors"
             aria-label="Toggle menu"
             onClick={() => setMenuOpen(v => !v)}
           >
@@ -55,9 +61,9 @@ export default function PublicLayout() {
         </div>
       </header>
 
-      {/* Mobile menu overlay */}
+      {/* Mobile menu overlay — z-60 so it sits above the z-50 sticky header */}
       {menuOpen && (
-        <div className="fixed inset-0 z-40 bg-white flex flex-col items-center justify-center gap-8 md:hidden">
+        <div className="fixed inset-0 z-60 bg-white flex flex-col items-center justify-center gap-8 md:hidden">
           <Link to="/" onClick={() => setMenuOpen(false)}
             className="text-3xl font-semibold text-gray-900 hover:text-[#19D1E6] transition-colors">
             Home

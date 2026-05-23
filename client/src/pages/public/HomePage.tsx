@@ -548,8 +548,8 @@ export default function HomePage() {
                 </Reveal>
                 <Reveal variant="fade-up" delayMs={200}>
                   <a href="mailto:nexa.acs.sjp@gmail.com" data-cursor="Email"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#19D1E6] hover:text-[#19D1E6]/70 transition-colors shrink-0">
-                    <span className="material-symbols-outlined text-base">mail</span>
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#19D1E6] hover:text-[#19D1E6]/70 transition-colors min-w-0 break-all">
+                    <span className="material-symbols-outlined text-base shrink-0">mail</span>
                     nexa.acs.sjp@gmail.com
                   </a>
                 </Reveal>
@@ -586,10 +586,10 @@ export default function HomePage() {
                       <a
                         href={`tel:${member.phone.replace(/\s/g, "")}`}
                         data-cursor="Call"
-                        className="w-8 h-8 rounded-lg bg-[#222] text-[#555] flex items-center justify-center shrink-0 hover:bg-[#19D1E6] hover:text-[#0e0e0e] transition-colors duration-300"
+                        className="w-11 h-11 rounded-lg bg-[#222] text-[#555] flex items-center justify-center shrink-0 hover:bg-[#19D1E6] hover:text-[#0e0e0e] transition-colors duration-300"
                         title={member.phone}
                       >
-                        <span className="material-symbols-outlined text-[1rem]">phone</span>
+                        <span className="material-symbols-outlined text-base">phone</span>
                       </a>
                     </div>
 

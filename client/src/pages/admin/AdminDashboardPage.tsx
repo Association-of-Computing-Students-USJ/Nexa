@@ -106,10 +106,10 @@ function DeleteModal({ name, onConfirm, onCancel }: {
           This action cannot be undone.
         </p>
         <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-2.5 border border-[#2a2a2a] text-[#888] rounded-xl hover:border-[#444] hover:text-white transition-colors text-sm font-medium">
+          <button onClick={onCancel} className="flex-1 py-3 border border-[#2a2a2a] text-[#888] rounded-xl hover:border-[#444] hover:text-white transition-colors text-sm font-medium">
             Cancel
           </button>
-          <button onClick={onConfirm} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors text-sm font-semibold">
+          <button onClick={onConfirm} className="flex-1 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors text-sm font-semibold">
             Remove
           </button>
         </div>
@@ -137,7 +137,7 @@ function DetailDrawer({ p, onClose }: { p: Participant; onClose: () => void }) {
       <div className="w-full max-w-sm h-full bg-[#161616] border-l border-[#2a2a2a] shadow-2xl overflow-y-auto flex flex-col" onClick={e => e.stopPropagation()}>
         <div className="p-5 border-b border-[#2a2a2a] flex items-center justify-between">
           <h3 className="font-bold text-white text-base">Participant Details</h3>
-          <button onClick={onClose} className="p-1.5 text-[#555] hover:text-white transition-colors">
+          <button onClick={onClose} className="p-2.5 text-[#555] hover:text-white transition-colors">
             <span className="material-symbols-outlined text-xl">close</span>
           </button>
         </div>
@@ -305,14 +305,14 @@ export default function AdminDashboardPage() {
               placeholder="Search by name, email or university…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-xl pl-10 pr-4 py-2.5 text-sm placeholder-[#444] focus:outline-none focus:ring-2 focus:ring-[#19D1E6]/30 focus:border-[#19D1E6]/60 transition-colors"
+              className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-xl pl-10 pr-4 py-3 text-sm placeholder-[#444] focus:outline-none focus:ring-2 focus:ring-[#19D1E6]/30 focus:border-[#19D1E6]/60 transition-colors"
             />
           </div>
-          <div className="relative">
+          <div className="relative w-full sm:w-auto">
             <select
               value={yearFilter}
               onChange={e => setYearFilter(e.target.value)}
-              className="bg-[#161616] border border-[#2a2a2a] text-white rounded-xl px-4 py-2.5 text-sm appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-[#19D1E6]/30 focus:border-[#19D1E6]/60 transition-colors"
+              className="w-full sm:w-auto bg-[#161616] border border-[#2a2a2a] text-white rounded-xl px-4 py-3 text-sm appearance-none pr-10 focus:outline-none focus:ring-2 focus:ring-[#19D1E6]/30 focus:border-[#19D1E6]/60 transition-colors"
             >
               {years.map(y => <option key={y} value={y}>{y === "All" ? "All Years" : y}</option>)}
             </select>
@@ -455,10 +455,10 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => setDetailTarget(p)} className="p-1.5 rounded-lg text-[#555] hover:text-[#19D1E6] transition-colors">
+                      <button onClick={() => setDetailTarget(p)} className="p-2.5 rounded-lg text-[#555] hover:text-[#19D1E6] transition-colors">
                         <span className="material-symbols-outlined text-base">open_in_new</span>
                       </button>
-                      <button onClick={() => setDeleteTarget(p)} className="p-1.5 rounded-lg text-[#555] hover:text-red-400 transition-colors">
+                      <button onClick={() => setDeleteTarget(p)} className="p-2.5 rounded-lg text-[#555] hover:text-red-400 transition-colors">
                         <span className="material-symbols-outlined text-base">delete</span>
                       </button>
                     </div>

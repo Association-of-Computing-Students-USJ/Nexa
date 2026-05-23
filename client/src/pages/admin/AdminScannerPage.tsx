@@ -131,7 +131,7 @@ function ResultCard({ result, onDismiss }: { result: ScanResult; onDismiss: () =
       </div>
       <button
         onClick={onDismiss}
-        className="w-full py-2 text-xs font-semibold text-[#888] hover:text-white border border-[#2a2a2a] rounded-xl hover:border-[#444] transition-colors"
+        className="w-full py-3 text-sm font-semibold text-[#888] hover:text-white border border-[#2a2a2a] rounded-xl hover:border-[#444] transition-colors"
       >
         Scan Next
       </button>
@@ -170,9 +170,10 @@ function QRScannerTab() {
         const scanner = new Html5Qrcode("qr-video-container");
         scannerRef.current = scanner;
 
+        const boxSize = Math.min(260, Math.round(window.innerWidth * 0.65));
         await scanner.start(
           { facingMode: "environment" },
-          { fps: 15, qrbox: { width: 240, height: 240 } },
+          { fps: 15, qrbox: { width: boxSize, height: boxSize } },
           async (decodedText) => {
             if (pausedRef.current || !mounted) return;
             pausedRef.current = true;
@@ -271,7 +272,7 @@ function QRScannerTab() {
             {/* Stop button */}
             <button
               onClick={stopCamera}
-              className="absolute top-3 right-3 p-2 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-red-400 transition-colors"
+              className="absolute top-3 right-3 p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-red-400 transition-colors"
               title="Stop camera"
             >
               <span className="material-symbols-outlined text-base">videocam_off</span>
@@ -407,7 +408,7 @@ function ManualTab() {
                   <button
                     onClick={() => handleMark(p)}
                     disabled={p.attended || markingId === p.id}
-                    className={`shrink-0 px-3 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    className={`shrink-0 px-3 py-2.5 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 ${
                       p.attended
                         ? "bg-emerald-500/10 text-emerald-400 cursor-default border border-emerald-500/20"
                         : "bg-[#19D1E6] text-[#0e0e0e] hover:bg-[#19D1E6]/90"
@@ -459,14 +460,14 @@ export default function AdminScannerPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold transition-colors ${
               tab === t.id
                 ? "bg-[#19D1E6] text-[#0e0e0e]"
                 : "text-[#888] hover:text-white"
             }`}
           >
             <span className="material-symbols-outlined text-base">{t.icon}</span>
-            <span className="hidden sm:inline">{t.label}</span>
+            <span>{t.label}</span>
           </button>
         ))}
       </div>

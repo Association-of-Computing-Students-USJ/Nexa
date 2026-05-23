@@ -113,8 +113,8 @@ export default function TicketPage() {
               { label: "Email",       value: ticket.email, accent: true, full: true },
             ].map((item) => (
               <div key={item.label} className={item.full ? "col-span-2" : ""}>
-                <p className="text-[#555] text-[10px] uppercase tracking-wider mb-0.5">{item.label}</p>
-                <p className={`text-xs font-medium break-all ${item.accent ? "text-[#19D1E6]" : "text-white"}`}>
+                <p className="text-[#555] text-xs uppercase tracking-wider mb-0.5">{item.label}</p>
+                <p className={`text-sm font-medium break-all ${item.accent ? "text-[#19D1E6]" : "text-white"}`}>
                   {item.value}
                 </p>
               </div>
@@ -125,14 +125,14 @@ export default function TicketPage() {
           <div className="px-6 sm:px-8 pb-8 flex flex-col sm:flex-row gap-3">
             <button
               onClick={handleDownload}
-              className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-xl hover:bg-[#19D1E6]/90 transition-colors text-sm"
+              className="flex-1 flex items-center justify-center gap-2 py-4 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-xl hover:bg-[#19D1E6]/90 transition-colors text-sm"
             >
               <span className="material-symbols-outlined text-base">download</span>
               Save QR Code
             </button>
             <Link
               to="/"
-              className="flex-1 flex items-center justify-center py-3.5 border border-[#2a2a2a] text-[#888] font-medium rounded-xl hover:border-[#444] hover:text-white transition-colors text-sm"
+              className="flex-1 flex items-center justify-center py-4 border border-[#2a2a2a] text-[#888] font-medium rounded-xl hover:border-[#444] hover:text-white transition-colors text-sm"
             >
               Back to Home
             </Link>
