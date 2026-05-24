@@ -59,5 +59,4 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ACSUSJ_WEB }}
 
       - name: Deploy to Firebase Hosting
-        working-directory: client
-        run: npx -y firebase-tools@latest deploy --only hosting:${FIREBASE_HOSTING_SITE} --project ${FIREBASE_PROJECT_ID}
+        run: npx -y firebase-tools@latest deploy --only hosting:${FIREBASE_HOSTING_SITE},firestore:rules --project ${FIREBASE_PROJECT_ID} --non-interactive

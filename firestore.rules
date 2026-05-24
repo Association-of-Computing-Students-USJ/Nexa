@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /sponsors/{document} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /projects/{document} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /executive-board/{document} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /executive-board-committee/{document} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /EB_reg_data/{document} {
+      allow read: if request.auth != null;
+      allow create: if
+        request.resource.data.keys().hasOnly([
+          'fullName', 'email', 'whatsappNumber', 'department', 'academicYear', 'registrationNumber',
+          'linkedinUrl', 'facebookUrl', 'positionPreferences', 'committeePreferences', 'editorialSkills',
+          'uploadedWorkUrls', 'tools', 'documentationSkills', 'webDevSkills', 'webDevScreenshotUrls',
+          'webDevProjectUrls', 'softSkills', 'softSkillsOther', 'volunteerExperience', 'submittedAt'
+        ])
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 2
+        && request.resource.data.fullName.size() <= 100
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 120
+        && request.resource.data.whatsappNumber is string
+        && request.resource.data.whatsappNumber.size() <= 20
+        && request.resource.data.department is string
+        && request.resource.data.academicYear is string
+        && request.resource.data.registrationNumber is string
+        && request.resource.data.registrationNumber.size() <= 40
+        && request.resource.data.linkedinUrl is string
+        && request.resource.data.linkedinUrl.size() <= 200
+        && request.resource.data.facebookUrl is string
+        && request.resource.data.facebookUrl.size() <= 200
+        && request.resource.data.positionPreferences is map
+        && request.resource.data.committeePreferences is map
+        && request.resource.data.editorialSkills is list
+        && request.resource.data.uploadedWorkUrls is list
+        && request.resource.data.tools is list
+        && request.resource.data.documentationSkills is list
+        && request.resource.data.webDevSkills is string
+        && request.resource.data.webDevSkills.size() <= 2000
+        && request.resource.data.webDevScreenshotUrls is list
+        && request.resource.data.webDevProjectUrls is string
+        && request.resource.data.webDevProjectUrls.size() <= 2000
+        && request.resource.data.softSkills is map
+        && request.resource.data.softSkillsOther is string
+        && request.resource.data.softSkillsOther.size() <= 300
+        && request.resource.data.volunteerExperience is map;
+      allow update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // NEXA 2026 event registration
+    match /registrations/{docId} {
+      allow create: if true;
+      allow read, delete: if request.auth != null;
+      allow update: if request.auth != null;
+    }
+
+    // Trigger Email extension
+    match /mail/{docId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

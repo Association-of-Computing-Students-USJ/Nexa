@@ -50,10 +50,10 @@ const COMMITTEE = [
   { name: "Niluni Sandunika",    role: "Secretary",             phone: "076 776 0746", image: niluniImage  },
   { name: "Vikum Deshan",        role: "Design Team Head",      phone: "070 210 6391", image: vikumImage   },
   { name: "Banula Bimsara",      role: "Technical Team Head",   phone: "070 210 6391", image: banulaImage  },
-  { name: "Poorna Sachinthana",  role: "Finance Head",          phone: "070 210 6391", image: poornaImage  },
+  { name: "Poorna Sachinthana",  role: "Finance Team Head",          phone: "070 210 6391", image: poornaImage  },
   { name: "Praveen Seneviratne", role: "Programming Team Head", phone: "070 210 6391", image: praveenImage },
   { name: "Thiran Ranathunga",   role: "Marketing Team Head",   phone: "070 210 6391", image: thiranImage  },
-  { name: "Rumeth Sathnidu",     role: "HR & Logistics Head",   phone: "070 210 6391", image: rumethImage  },
+  { name: "Rumeth Sathnidu",     role: "HR & Logistics Team Head",   phone: "070 210 6391", image: rumethImage  },
 ];
 
 /* ─── Image Slot ─────────────────────────────────────────────
@@ -572,7 +572,7 @@ export default function HomePage() {
                       <img
                         src={member.image}
                         alt={member.name}
-                        className="w-full h-full object-cover object-top grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500"
+                        className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                       />
                       <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
                     </div>
