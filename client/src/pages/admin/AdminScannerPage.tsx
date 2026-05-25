@@ -169,11 +169,56 @@ function isMobileViewport(): boolean {
 
 async function listCameras(): Promise<CameraDevice[]> {
   try {
+    // Unlock device labels/enumeration once permission is granted.
+    if (navigator.mediaDevices?.getUserMedia) {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach((track) => track.stop());
+    }
     const devices = await Html5Qrcode.getCameras();
     return devices.map((d) => ({ id: d.id, label: d.label || "" }));
   } catch {
-    return [];
+    try {
+      const devices = await Html5Qrcode.getCameras();
+      return devices.map((d) => ({ id: d.id, label: d.label || "" }));
+    } catch {
+      return [];
+    }
   }
+}
+
+function buildCameraAttempts(
+  facing: CameraFacing,
+  cameras: CameraDevice[]
+): Array<string | MediaTrackConstraints> {
+  const attempts: Array<string | MediaTrackConstraints> = [];
+  const seen = new Set<string>();
+
+  const add = (input: string | MediaTrackConstraints) => {
+    const key = typeof input === "string" ? input : JSON.stringify(input);
+    if (seen.has(key)) return;
+    seen.add(key);
+    attempts.push(input);
+  };
+
+  const preferred = pickCameraForFacing(facing, cameras);
+  if (preferred) add(preferred);
+
+  add({ facingMode: { ideal: facing } });
+  add({ facingMode: facing });
+
+  for (const camera of cameras) add(camera.id);
+
+  add({ facingMode: { ideal: facing === "environment" ? "user" : "environment" } });
+
+  return attempts;
+}
+
+function cameraStartError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.toLowerCase().includes("permission")) {
+    return "Camera permission denied. Allow camera access in your browser settings.";
+  }
+  return "Could not start camera. Tap Start Camera and allow access when prompted.";
 }
 
 function pickCameraForFacing(facing: CameraFacing, cameras: CameraDevice[]): string | null {
@@ -193,12 +238,6 @@ function pickCameraForFacing(facing: CameraFacing, cameras: CameraDevice[]): str
   return cameras[0].id;
 }
 
-function cameraInput(facing: CameraFacing, cameras: CameraDevice[]): string | MediaTrackConstraints {
-  const id = pickCameraForFacing(facing, cameras);
-  if (id) return id;
-  return { facingMode: { ideal: facing } };
-}
-
 function buildScanConfig() {
   const ios = isIOSDevice();
   const mobile = isMobileViewport();
@@ -213,7 +252,7 @@ function buildScanConfig() {
     aspectRatio: 1.0,
   };
 
-  // Fixed qrbox often breaks the camera preview on iOS Safari
+  // Fixed qrbox often breaks the camera preview on mobile browsers
   if (!ios && !mobile) {
     const boxSize = Math.min(260, Math.round(window.innerWidth * 0.65));
     config.qrbox = { width: boxSize, height: boxSize };
@@ -326,13 +365,7 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     try {
       scannerRef.current = new Html5Qrcode(containerId);
       const cameras = await listCameras();
-
-      const attempts: Array<string | MediaTrackConstraints> = [
-        cameraInput("environment", cameras),
-        { facingMode: { ideal: "environment" } },
-        { facingMode: "environment" },
-      ];
-      if (cameras[0]) attempts.push(cameras[0].id);
+      const attempts = buildCameraAttempts("environment", cameras);
 
       let lastErr: unknown;
       for (const input of attempts) {
@@ -352,14 +385,7 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
       throw lastErr;
     } catch (err: unknown) {
       mountedRef.current = false;
-      const msg = err instanceof Error ? err.message : String(err);
-      setCameraError(
-        msg.toLowerCase().includes("permission")
-          ? "Camera permission denied. Allow camera access in your browser settings."
-          : isIOSDevice()
-            ? "Could not start camera. Use Safari over HTTPS and tap Start Camera again."
-            : "Could not start camera."
-      );
+      setCameraError(cameraStartError(err));
       await stopCamera();
     } finally {
       setStartingCamera(false);
@@ -377,18 +403,26 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     setCameraError("");
 
     try {
-      await startScanner(cameraInput(nextFacing, availableCameras));
-      setFacingMode(nextFacing);
-    } catch {
-      try {
-        await startScanner({ facingMode: { ideal: nextFacing } });
-        setFacingMode(nextFacing);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
+      let switched = false;
+      let lastErr: unknown;
+
+      for (const input of buildCameraAttempts(nextFacing, availableCameras)) {
+        try {
+          await startScanner(input);
+          setFacingMode(nextFacing);
+          switched = true;
+          break;
+        } catch (err) {
+          lastErr = err;
+          if (scannerRef.current?.isScanning) {
+            await scannerRef.current.stop().catch(() => {});
+          }
+        }
+      }
+
+      if (!switched) {
         setCameraError(
-          msg.toLowerCase().includes("permission")
-            ? "Camera permission denied."
-            : "Could not switch camera."
+          lastErr ? cameraStartError(lastErr) : "Could not switch camera."
         );
       }
     } finally {
