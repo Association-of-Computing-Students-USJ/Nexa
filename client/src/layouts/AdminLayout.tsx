@@ -4,11 +4,34 @@ import nexaLogo from "../assets/images/logo/NEXA Colour.png";
 import CustomCursor from "../components/CustomCursor";
 import { ensureFirebaseAuth } from "../lib/firebaseAuth";
 import { ADMIN_SESSION_KEY } from "../pages/admin/AdminLoginPage";
+import { RegistrationsProvider, useRegistrations } from "../context/RegistrationsContext";
 
 const NAV_ITEMS = [
   { icon: "group",            label: "Participants", path: "/admin/dashboard" },
   { icon: "qr_code_scanner",  label: "QR Scanner",  path: "/admin/scanner"   },
 ];
+
+function AdminLiveBadge() {
+  const { live, loading } = useRegistrations();
+  if (loading) return null;
+  return (
+    <div
+      className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border ${
+        live
+          ? "bg-emerald-500/8 border-emerald-500/25"
+          : "bg-amber-500/8 border-amber-500/25"
+      }`}
+      title={live ? "Live sync active — changes appear instantly" : "Reconnecting…"}
+    >
+      <span
+        className={`w-1.5 h-1.5 rounded-full ${live ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`}
+      />
+      <span className={`text-xs font-semibold ${live ? "text-emerald-400" : "text-amber-400"}`}>
+        {live ? "Live" : "Offline"}
+      </span>
+    </div>
+  );
+}
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -36,6 +59,7 @@ export default function AdminLayout() {
   }
 
   return (
+    <RegistrationsProvider>
     <div className="min-h-dvh bg-[#0a0a0a] flex">
       <CustomCursor />
 
@@ -162,6 +186,7 @@ export default function AdminLayout() {
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <AdminLiveBadge />
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#19D1E6]/8 border border-[#19D1E6]/20">
               <span className="w-1.5 h-1.5 bg-[#19D1E6] rounded-full animate-pulse" />
               <span className="text-[#19D1E6] text-xs font-semibold">Admin</span>
@@ -182,5 +207,6 @@ export default function AdminLayout() {
         </main>
       </div>
     </div>
+    </RegistrationsProvider>
   );
 }

@@ -1,33 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
-  collection,
-  onSnapshot,
   deleteDoc,
   doc,
-  query,
-  orderBy,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { ensureFirebaseAuth } from "../../lib/firebaseAuth";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Participant {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  whatsapp: string;
-  university: string;
-  year: string;
-  registeredAt: Timestamp | null;
-  attended: boolean;
-  attendedAt: Timestamp | null;
-  mealServed: boolean;
-  mealServedAt: Timestamp | null;
-  emailStatus?: "sent" | "pending";
-}
+import { undoEntry, undoMeal } from "../../lib/checkIn";
+import { useRegistrations } from "../../context/RegistrationsContext";
+import type { Participant } from "../../types/participant";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -124,18 +104,55 @@ function DeleteModal({ name, onConfirm, onCancel }: {
 // ─── Detail Drawer ────────────────────────────────────────────────────────────
 
 function DetailDrawer({ p, onClose }: { p: Participant; onClose: () => void }) {
-  const fields = [
-    { icon: "person",        label: "Full Name",       value: p.name },
-    { icon: "mail",          label: "Email",           value: p.email },
-    { icon: "phone",         label: "Phone",           value: p.phone },
-    { icon: "chat",          label: "WhatsApp",        value: p.whatsapp },
-    { icon: "school",        label: "University",      value: p.university },
-    { icon: "calendar_today",label: "Academic Year",   value: p.year },
-    { icon: "schedule",      label: "Registered At",   value: fmtDate(p.registeredAt) },
-    { icon: "badge",         label: "Ticket ID",       value: p.id.slice(0, 12).toUpperCase() },
-    { icon: "how_to_reg",    label: "Entry Check-In",  value: p.attended ? `✓ ${fmtDate(p.attendedAt)}` : "Not checked in" },
-    { icon: "restaurant",    label: "Meal Status",     value: p.mealServed ? `✓ ${fmtDate(p.mealServedAt)}` : "Not served" },
+  const [undoing, setUndoing] = useState<"entry" | "meal" | null>(null);
+  const [undoError, setUndoError] = useState("");
+
+  const infoFields = [
+    { icon: "person",         label: "Full Name",     value: p.name },
+    { icon: "mail",           label: "Email",         value: p.email },
+    { icon: "phone",          label: "Phone",         value: p.phone },
+    { icon: "chat",           label: "WhatsApp",      value: p.whatsapp },
+    { icon: "school",         label: "University",    value: p.university },
+    { icon: "calendar_today", label: "Academic Year", value: p.year },
+    { icon: "schedule",       label: "Registered At", value: fmtDate(p.registeredAt) },
+    { icon: "badge",          label: "Ticket ID",     value: p.id.slice(0, 12).toUpperCase() },
   ];
+
+  async function handleUndoEntry() {
+    if (!p.attended || undoing) return;
+    setUndoing("entry");
+    setUndoError("");
+    try {
+      await undoEntry(p.id);
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code ?? "";
+      setUndoError(
+        code === "permission-denied"
+          ? "Could not undo check-in — Firebase Auth may not be set up."
+          : "Could not undo check-in. Please try again."
+      );
+    } finally {
+      setUndoing(null);
+    }
+  }
+
+  async function handleUndoMeal() {
+    if (!p.mealServed || undoing) return;
+    setUndoing("meal");
+    setUndoError("");
+    try {
+      await undoMeal(p.id);
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code ?? "";
+      setUndoError(
+        code === "permission-denied"
+          ? "Could not undo meal status — Firebase Auth may not be set up."
+          : "Could not undo meal status. Please try again."
+      );
+    } finally {
+      setUndoing(null);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
@@ -162,9 +179,19 @@ function DetailDrawer({ p, onClose }: { p: Participant; onClose: () => void }) {
             )}
           </div>
 
-          {/* Fields */}
+          {undoError && (
+            <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/25 rounded-xl">
+              <span className="material-symbols-outlined text-red-400 text-base shrink-0">error</span>
+              <p className="text-red-400 text-xs leading-relaxed flex-1">{undoError}</p>
+              <button onClick={() => setUndoError("")} className="text-red-400/60 hover:text-red-400 shrink-0">
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+          )}
+
+          {/* Info fields */}
           <div className="space-y-3">
-            {fields.map(f => (
+            {infoFields.map(f => (
               <div key={f.label} className="flex items-start gap-3 p-3 rounded-xl bg-[#0e0e0e] border border-[#1a1a1a]">
                 <span className="material-symbols-outlined text-[#19D1E6] text-base mt-0.5 shrink-0">{f.icon}</span>
                 <div className="min-w-0">
@@ -173,6 +200,64 @@ function DetailDrawer({ p, onClose }: { p: Participant; onClose: () => void }) {
                 </div>
               </div>
             ))}
+
+            {/* Entry check-in — with undo */}
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-[#0e0e0e] border border-[#1a1a1a]">
+              <span className="material-symbols-outlined text-[#19D1E6] text-base mt-0.5 shrink-0">how_to_reg</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[#555] text-[10px] uppercase tracking-wider">Entry Check-In</p>
+                <p className={`text-sm font-medium mt-0.5 ${p.attended ? "text-emerald-400" : "text-[#888]"}`}>
+                  {p.attended ? `✓ ${fmtDate(p.attendedAt)}` : "Not checked in"}
+                </p>
+              </div>
+              {p.attended && (
+                <button
+                  onClick={handleUndoEntry}
+                  disabled={undoing !== null}
+                  className="shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-400 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                  title="Undo check-in"
+                >
+                  {undoing === "entry" ? (
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <span className="material-symbols-outlined text-sm">undo</span>
+                  )}
+                  Undo
+                </button>
+              )}
+            </div>
+
+            {/* Meal status — with undo */}
+            <div className="flex items-start gap-3 p-3 rounded-xl bg-[#0e0e0e] border border-[#1a1a1a]">
+              <span className="material-symbols-outlined text-[#19D1E6] text-base mt-0.5 shrink-0">restaurant</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[#555] text-[10px] uppercase tracking-wider">Meal Status</p>
+                <p className={`text-sm font-medium mt-0.5 ${p.mealServed ? "text-orange-400" : "text-[#888]"}`}>
+                  {p.mealServed ? `✓ ${fmtDate(p.mealServedAt)}` : "Not served"}
+                </p>
+              </div>
+              {p.mealServed && (
+                <button
+                  onClick={handleUndoMeal}
+                  disabled={undoing !== null}
+                  className="shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-400 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                  title="Undo meal served"
+                >
+                  {undoing === "meal" ? (
+                    <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+                    </svg>
+                  ) : (
+                    <span className="material-symbols-outlined text-sm">undo</span>
+                  )}
+                  Undo
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -183,49 +268,12 @@ function DetailDrawer({ p, onClose }: { p: Participant; onClose: () => void }) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
-  const [participants, setParticipants] = useState<Participant[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [firestoreError, setFirestoreError] = useState("");
+  const { participants, loading, error: firestoreError } = useRegistrations();
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState("All");
   const [deleteTarget, setDeleteTarget] = useState<Participant | null>(null);
   const [detailTarget, setDetailTarget] = useState<Participant | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // Firebase is the sole backend — authenticate then subscribe to registrations
-  useEffect(() => {
-    let unsubSnap: (() => void) | null = null;
-    let active = true;
-
-    ensureFirebaseAuth()
-      .then(() => {
-        if (!active) return;
-        setFirestoreError("");
-        setLoading(true);
-        const q = query(collection(db, "registrations"), orderBy("registeredAt", "desc"));
-        unsubSnap = onSnapshot(
-          q,
-          (snap) => {
-            setParticipants(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Participant, "id">) })));
-            setLoading(false);
-          },
-          (err) => {
-            setFirestoreError(`Firestore error: ${err.code} — ${err.message}`);
-            setLoading(false);
-          }
-        );
-      })
-      .catch(() => {
-        if (!active) return;
-        setFirestoreError("Not signed into Firebase. Please log out and log back in to the admin portal.");
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-      if (unsubSnap) unsubSnap();
-    };
-  }, []);
 
   // Derived stats
   const todayCount = useMemo(() => participants.filter(p => isToday(p.registeredAt)).length, [participants]);
@@ -263,7 +311,10 @@ export default function AdminDashboardPage() {
         />
       )}
       {detailTarget && (
-        <DetailDrawer p={detailTarget} onClose={() => setDetailTarget(null)} />
+        <DetailDrawer
+          p={participants.find((x) => x.id === detailTarget.id) ?? detailTarget}
+          onClose={() => setDetailTarget(null)}
+        />
       )}
 
       <div className="space-y-6">

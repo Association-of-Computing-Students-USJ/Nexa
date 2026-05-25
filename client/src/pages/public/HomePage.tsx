@@ -632,6 +632,10 @@ export default function HomePage() {
 
             {/* Brand */}
             <div>
+              <p className="text-lg sm:text-xl font-bold text-white tracking-tight leading-snug mb-5 max-w-xs">
+                One Day. One Vision.{" "}
+                <span className="text-[#19D1E6]">Endless Impact.</span>
+              </p>
               <div className="flex items-center gap-2 mb-4">
                 <img src={nexaLogo} alt="NEXA" className="h-7 w-7 object-contain" />
                 <span className="text-xl font-bold text-[#19D1E6]">NEXA</span>

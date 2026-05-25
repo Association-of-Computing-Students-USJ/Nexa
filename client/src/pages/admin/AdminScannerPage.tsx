@@ -1,33 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  serverTimestamp,
-  Timestamp,
-  updateDoc,
-} from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { Timestamp } from "firebase/firestore";
+import { checkInEntry, checkInMeal } from "../../lib/checkIn";
+import { useRegistrations } from "../../context/RegistrationsContext";
 import { ensureFirebaseAuth } from "../../lib/firebaseAuth";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface Participant {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  university: string;
-  year: string;
-  attended: boolean;
-  attendedAt: Timestamp | null;
-  mealServed: boolean;
-  mealServedAt: Timestamp | null;
-}
+import type { ParticipantScan } from "../../types/participant";
 
 type ScanStatus =
   | "success"
@@ -39,7 +16,7 @@ type ScanStatus =
 
 interface ScanResult {
   status: ScanStatus;
-  participant?: Participant;
+  participant?: ParticipantScan;
   qrText?: string;
 }
 
@@ -59,58 +36,26 @@ function fmtTime(ts: Timestamp | null): string {
   );
 }
 
-// Entry check-in (auth must already be established before calling)
+// Entry check-in — atomic transaction (safe for many simultaneous scanners)
 async function processQR(qrText: string): Promise<ScanResult> {
   const id = parseQRId(qrText.trim());
   if (!id) return { status: "invalid", qrText };
 
-  const ref = doc(db, "registrations", id);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) return { status: "not_found", qrText };
-
-  const data = snap.data() as Omit<Participant, "id">;
-  const participant: Participant = { id: snap.id, ...data };
-
-  if (data.attended) return { status: "already_attended", participant };
-
-  await updateDoc(ref, { attended: true, attendedAt: serverTimestamp() });
+  const { outcome, participant } = await checkInEntry(id);
+  if (outcome === "not_found") return { status: "not_found", qrText };
+  if (outcome === "already") return { status: "already_attended", participant };
   return { status: "success", participant };
 }
 
-// Meal check-in (auth must already be established before calling)
+// Meal check-in — atomic transaction
 async function processMealQR(qrText: string): Promise<ScanResult> {
   const id = parseQRId(qrText.trim());
   if (!id) return { status: "invalid", qrText };
 
-  const ref = doc(db, "registrations", id);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) return { status: "not_found", qrText };
-
-  const data = snap.data() as Omit<Participant, "id">;
-  const participant: Participant = { id: snap.id, ...data };
-
-  if (data.mealServed) return { status: "already_meal", participant };
-
-  await updateDoc(ref, { mealServed: true, mealServedAt: serverTimestamp() });
+  const { outcome, participant } = await checkInMeal(id);
+  if (outcome === "not_found") return { status: "not_found", qrText };
+  if (outcome === "already") return { status: "already_meal", participant };
   return { status: "meal_success", participant };
-}
-
-async function markEntryManually(id: string): Promise<void> {
-  await ensureFirebaseAuth();
-  await updateDoc(doc(db, "registrations", id), {
-    attended: true,
-    attendedAt: serverTimestamp(),
-  });
-}
-
-async function markMealManually(id: string): Promise<void> {
-  await ensureFirebaseAuth();
-  await updateDoc(doc(db, "registrations", id), {
-    mealServed: true,
-    mealServedAt: serverTimestamp(),
-  });
 }
 
 // ─── Result Card ──────────────────────────────────────────────────────────────
@@ -203,28 +148,106 @@ function ResultCard({ result, onDismiss }: { result: ScanResult; onDismiss: () =
 
 // ─── Generic QR Scanner Tab ───────────────────────────────────────────────────
 
+interface CameraDevice {
+  id: string;
+  label: string;
+}
+
 type CameraFacing = "environment" | "user";
+
+function isIOSDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
+function isMobileViewport(): boolean {
+  return typeof window !== "undefined" && window.innerWidth < 768;
+}
+
+async function listCameras(): Promise<CameraDevice[]> {
+  try {
+    const devices = await Html5Qrcode.getCameras();
+    return devices.map((d) => ({ id: d.id, label: d.label || "" }));
+  } catch {
+    return [];
+  }
+}
+
+function pickCameraForFacing(facing: CameraFacing, cameras: CameraDevice[]): string | null {
+  if (!cameras.length) return null;
+
+  const pattern =
+    facing === "environment"
+      ? /back|rear|environment|trás|posteriore|wide/i
+      : /front|user|face|selfie|facetime/i;
+
+  const match = cameras.find((c) => pattern.test(c.label));
+  if (match) return match.id;
+
+  if (cameras.length >= 2) {
+    return facing === "environment" ? cameras[cameras.length - 1].id : cameras[0].id;
+  }
+  return cameras[0].id;
+}
+
+function cameraInput(facing: CameraFacing, cameras: CameraDevice[]): string | MediaTrackConstraints {
+  const id = pickCameraForFacing(facing, cameras);
+  if (id) return id;
+  return { facingMode: { ideal: facing } };
+}
+
+function buildScanConfig() {
+  const ios = isIOSDevice();
+  const mobile = isMobileViewport();
+  const config: {
+    fps: number;
+    disableFlip: boolean;
+    aspectRatio: number;
+    qrbox?: { width: number; height: number };
+  } = {
+    fps: ios || mobile ? 10 : 15,
+    disableFlip: false,
+    aspectRatio: 1.0,
+  };
+
+  // Fixed qrbox often breaks the camera preview on iOS Safari
+  if (!ios && !mobile) {
+    const boxSize = Math.min(260, Math.round(window.innerWidth * 0.65));
+    config.qrbox = { width: boxSize, height: boxSize };
+  }
+  return config;
+}
+
+function patchScannerVideo(containerId: string) {
+  const video = document.getElementById(containerId)?.querySelector("video");
+  if (!video) return;
+  video.setAttribute("playsinline", "true");
+  video.setAttribute("webkit-playsinline", "true");
+  video.muted = true;
+  video.playsInline = true;
+  void video.play().catch(() => {});
+}
 
 function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
   const [authReady, setAuthReady]   = useState(false);
   const [authError, setAuthError]   = useState("");
   const [cameraActive, setCameraActive] = useState(false);
+  const [startingCamera, setStartingCamera] = useState(false);
   const [scanning, setScanning]     = useState(false);
   const [processing, setProcessing] = useState(false);
   const [result, setResult]         = useState<ScanResult | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [facingMode, setFacingMode] = useState<CameraFacing>("environment");
+  const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
   const [switchingCamera, setSwitchingCamera] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const pausedRef  = useRef(false);
   const mountedRef = useRef(false);
 
   const containerId = mode === "entry" ? "qr-entry-container" : "qr-meal-container";
-
-  const getScanConfig = useCallback(() => {
-    const boxSize = Math.min(260, Math.round(window.innerWidth * 0.65));
-    return { fps: 15, qrbox: { width: boxSize, height: boxSize } } as const;
-  }, []);
 
   const onScanSuccess = useCallback(async (decodedText: string) => {
     if (pausedRef.current || !mountedRef.current) return;
@@ -246,21 +269,24 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     }
   }, [mode]);
 
-  const startScanner = useCallback(async (facing: CameraFacing) => {
+  const startScanner = useCallback(async (cameraIdOrConfig: string | MediaTrackConstraints) => {
     const scanner = scannerRef.current ?? new Html5Qrcode(containerId);
     scannerRef.current = scanner;
 
-    if (scanner.isScanning) await scanner.stop();
+    if (scanner.isScanning) {
+      await scanner.stop().catch(() => {});
+    }
 
     await scanner.start(
-      { facingMode: facing },
-      getScanConfig(),
+      cameraIdOrConfig,
+      buildScanConfig(),
       onScanSuccess,
       undefined
     );
 
+    patchScannerVideo(containerId);
     if (mountedRef.current) setScanning(true);
-  }, [containerId, getScanConfig, onScanSuccess]);
+  }, [containerId, onScanSuccess]);
 
   // ── Authenticate once on mount before allowing camera start ──────────────
   useEffect(() => {
@@ -280,38 +306,67 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
       if (scannerRef.current?.isScanning) await scannerRef.current.stop();
       scannerRef.current = null;
     } catch { /* ignore */ }
+    mountedRef.current = false;
     setScanning(false);
     setCameraActive(false);
+    setStartingCamera(false);
     setFacingMode("environment");
+    setAvailableCameras([]);
     setSwitchingCamera(false);
     pausedRef.current = false;
   }, []);
 
-  useEffect(() => {
-    if (!cameraActive) return;
+  // Start camera directly from the tap/click handler — required for iOS Safari
+  const handleStartCamera = useCallback(async () => {
+    if (!authReady || startingCamera) return;
+    setCameraError("");
+    setStartingCamera(true);
     mountedRef.current = true;
 
-    const start = async () => {
-      try {
-        scannerRef.current = new Html5Qrcode(containerId);
-        await startScanner("environment");
-        setFacingMode("environment");
-      } catch (err: unknown) {
-        if (!mountedRef.current) return;
-        const msg = err instanceof Error ? err.message : String(err);
-        setCameraError(msg.includes("permission") ? "Camera permission denied." : "Could not start camera.");
-        setCameraActive(false);
+    try {
+      scannerRef.current = new Html5Qrcode(containerId);
+      const cameras = await listCameras();
+
+      const attempts: Array<string | MediaTrackConstraints> = [
+        cameraInput("environment", cameras),
+        { facingMode: { ideal: "environment" } },
+        { facingMode: "environment" },
+      ];
+      if (cameras[0]) attempts.push(cameras[0].id);
+
+      let lastErr: unknown;
+      for (const input of attempts) {
+        try {
+          await startScanner(input);
+          setFacingMode("environment");
+          setCameraActive(true);
+          setAvailableCameras(await listCameras());
+          return;
+        } catch (err) {
+          lastErr = err;
+          if (scannerRef.current?.isScanning) {
+            await scannerRef.current.stop().catch(() => {});
+          }
+        }
       }
-    };
-
-    const t = setTimeout(start, 80);
-    return () => {
+      throw lastErr;
+    } catch (err: unknown) {
       mountedRef.current = false;
-      clearTimeout(t);
-    };
-  }, [cameraActive, containerId, startScanner]);
+      const msg = err instanceof Error ? err.message : String(err);
+      setCameraError(
+        msg.toLowerCase().includes("permission")
+          ? "Camera permission denied. Allow camera access in your browser settings."
+          : isIOSDevice()
+            ? "Could not start camera. Use Safari over HTTPS and tap Start Camera again."
+            : "Could not start camera."
+      );
+      await stopCamera();
+    } finally {
+      setStartingCamera(false);
+    }
+  }, [authReady, containerId, startingCamera, startScanner, stopCamera]);
 
-  useEffect(() => () => { stopCamera(); }, [stopCamera]);
+  useEffect(() => () => { void stopCamera(); }, [stopCamera]);
 
   const handleFlipCamera = async () => {
     if (switchingCamera || processing) return;
@@ -319,14 +374,23 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     const nextFacing: CameraFacing = facingMode === "environment" ? "user" : "environment";
     setSwitchingCamera(true);
     setScanning(false);
+    setCameraError("");
 
     try {
-      await startScanner(nextFacing);
+      await startScanner(cameraInput(nextFacing, availableCameras));
       setFacingMode(nextFacing);
-      setCameraError("");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setCameraError(msg.includes("permission") ? "Camera permission denied." : "Could not switch camera.");
+    } catch {
+      try {
+        await startScanner({ facingMode: { ideal: nextFacing } });
+        setFacingMode(nextFacing);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setCameraError(
+          msg.toLowerCase().includes("permission")
+            ? "Camera permission denied."
+            : "Could not switch camera."
+        );
+      }
     } finally {
       setSwitchingCamera(false);
     }
@@ -375,22 +439,29 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
             <p className="text-red-400 text-sm text-center px-4">{cameraError}</p>
           )}
           <button
-            onClick={() => { setCameraError(""); setCameraActive(true); }}
-            disabled={!authReady}
+            onClick={() => void handleStartCamera()}
+            disabled={!authReady || startingCamera}
             className={`px-6 py-3 font-bold rounded-xl transition-colors flex items-center gap-2 text-sm disabled:opacity-40 disabled:cursor-not-allowed ${
               mode === "entry"
                 ? "bg-[#19D1E6] text-[#0e0e0e] hover:bg-[#19D1E6]/90"
                 : "bg-orange-500 text-white hover:bg-orange-600"
             }`}
           >
-            <span className="material-symbols-outlined text-base">videocam</span>
-            Start Camera
+            {startingCamera ? (
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+              </svg>
+            ) : (
+              <span className="material-symbols-outlined text-base">videocam</span>
+            )}
+            {startingCamera ? "Starting…" : "Start Camera"}
           </button>
         </div>
       ) : (
         <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl overflow-hidden">
           <div className="relative">
-            <div id={containerId} className="w-full" />
+            <div id={containerId} className="qr-scanner-view w-full min-h-[280px] sm:min-h-[320px]" />
 
             {processing && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-3">
@@ -455,54 +526,41 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
 // ─── Manual Search Tab ────────────────────────────────────────────────────────
 
 function ManualTab() {
+  const { participants } = useRegistrations();
   const [searchTerm, setSearchTerm] = useState("");
-  const [results, setResults] = useState<Participant[]>([]);
   const [searched, setSearched] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [markingAction, setMarkingAction] = useState<"entry" | "meal" | null>(null);
   const [writeError, setWriteError] = useState("");
 
-  const handleSearch = async () => {
+  const results = useMemo(() => {
+    if (!searched || !searchTerm.trim()) return [];
+    const term = searchTerm.toLowerCase();
+    return participants.filter((p) =>
+      p.name.toLowerCase().includes(term) ||
+      p.email.toLowerCase().includes(term) ||
+      p.phone.includes(term) ||
+      p.university.toLowerCase().includes(term) ||
+      p.id.toLowerCase().startsWith(term)
+    );
+  }, [participants, searched, searchTerm]);
+
+  const handleSearch = () => {
     if (!searchTerm.trim()) return;
-    setLoading(true);
     setSearched(true);
-    try {
-      await ensureFirebaseAuth();
-      const q = query(collection(db, "registrations"), orderBy("name"));
-      const snap = await getDocs(q);
-      const term = searchTerm.toLowerCase();
-      const found = snap.docs
-        .filter((d) => {
-          const data = d.data();
-          return (
-            data.name?.toLowerCase().includes(term) ||
-            data.email?.toLowerCase().includes(term) ||
-            data.phone?.includes(term) ||
-            data.university?.toLowerCase().includes(term) ||
-            d.id.toLowerCase().startsWith(term)
-          );
-        })
-        .map((d) => ({ id: d.id, ...d.data() } as Participant));
-      setResults(found);
-    } catch {
-      setResults([]);
-    }
-    setLoading(false);
+    setWriteError("");
   };
 
-  const handleMarkEntry = async (p: Participant) => {
+  const handleMarkEntry = async (p: ParticipantScan) => {
     if (p.attended) return;
     setMarkingId(p.id);
     setMarkingAction("entry");
     setWriteError("");
     try {
-      await markEntryManually(p.id);
-      setResults((prev) =>
-        prev.map((r) =>
-          r.id === p.id ? { ...r, attended: true, attendedAt: Timestamp.now() } : r
-        )
-      );
+      const { outcome } = await checkInEntry(p.id);
+      if (outcome === "not_found") {
+        setWriteError("Participant not found — they may have been removed.");
+      }
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? "";
       const msg  = (err as { message?: string })?.message ?? "Unknown error";
@@ -514,18 +572,16 @@ function ManualTab() {
     }
   };
 
-  const handleMarkMeal = async (p: Participant) => {
+  const handleMarkMeal = async (p: ParticipantScan) => {
     if (p.mealServed) return;
     setMarkingId(p.id);
     setMarkingAction("meal");
     setWriteError("");
     try {
-      await markMealManually(p.id);
-      setResults((prev) =>
-        prev.map((r) =>
-          r.id === p.id ? { ...r, mealServed: true, mealServedAt: Timestamp.now() } : r
-        )
-      );
+      const { outcome } = await checkInMeal(p.id);
+      if (outcome === "not_found") {
+        setWriteError("Participant not found — they may have been removed.");
+      }
     } catch (err: unknown) {
       const code = (err as { code?: string })?.code ?? "";
       const msg  = (err as { message?: string })?.message ?? "Unknown error";
@@ -572,17 +628,10 @@ function ManualTab() {
         </div>
         <button
           onClick={handleSearch}
-          disabled={!searchTerm.trim() || loading}
+          disabled={!searchTerm.trim()}
           className="px-4 py-2.5 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-xl hover:bg-[#19D1E6]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm shrink-0 flex items-center gap-1.5"
         >
-          {loading ? (
-            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
-            </svg>
-          ) : (
-            <span className="material-symbols-outlined text-base">search</span>
-          )}
+          <span className="material-symbols-outlined text-base">search</span>
           Search
         </button>
       </div>
