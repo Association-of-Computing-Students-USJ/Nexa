@@ -211,6 +211,11 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
   const [processing, setProcessing] = useState(false);
   const [result, setResult]         = useState<ScanResult | null>(null);
   const [cameraError, setCameraError] = useState("");
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [showDebug, setShowDebug] = useState(false);
+  const [fullFrame, setFullFrame] = useState(true);
+  const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
+  const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const pausedRef  = useRef(false);
 
@@ -229,8 +234,33 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     return () => { active = false; };
   }, []);
 
+  // Debug log helper + camera enumeration
+  const addLog = (msg: string) => {
+    const ts = new Date().toLocaleTimeString();
+    const line = `[${ts}] ${msg}`;
+    setDebugLogs((prev) => [line, ...prev].slice(0, 200));
+    console.debug(line);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    (Html5Qrcode as any).getCameras()
+      .then((cams: Array<{ id: string; label?: string }>) => {
+        if (!mounted) return;
+        const mapped = cams.map((c) => ({ id: c.id, label: c.label || c.id }));
+        setCameras(mapped);
+        if (mapped.length) setSelectedCamera((prev) => prev ?? mapped[0].id);
+        addLog(`Found ${mapped.length} camera(s)`);
+      })
+      .catch((err: unknown) => {
+        addLog(`Could not enumerate cameras: ${String(err)}`);
+      });
+    return () => { mounted = false; };
+  }, []);
+
   const stopCamera = useCallback(async () => {
     try {
+      addLog("Stopping scanner");
       if (scannerRef.current?.isScanning) await scannerRef.current.stop();
       scannerRef.current = null;
     } catch { /* ignore */ }
@@ -249,10 +279,17 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
         scannerRef.current = scanner;
 
         const boxSize = Math.min(260, Math.round(window.innerWidth * 0.65));
+
+        const config: any = { fps: 10, verbose: true, disableFlip: false };
+        if (!fullFrame) config.qrbox = { width: boxSize, height: boxSize };
+
+        addLog(`Starting scanner (camera=${selectedCamera ?? 'auto'} fullFrame=${fullFrame})`);
+
         await scanner.start(
-          { facingMode: "environment" },
-          { fps: 15, qrbox: { width: boxSize, height: boxSize } },
-          async (decodedText) => {
+          selectedCamera ?? { facingMode: "environment" },
+          config,
+          async (decodedText: string) => {
+            addLog(`Decoded text: ${decodedText}`);
             if (pausedRef.current || !mounted) return;
             pausedRef.current = true;
             setProcessing(true);
@@ -264,20 +301,22 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
               if (!mounted) return;
               setResult(res);
             } catch (err) {
-              console.error("QR processing error:", err);
+              addLog(`QR processing error: ${String(err)}`);
               if (!mounted) return;
-              // Don't reset pausedRef here — force user to dismiss so rapid loops can't occur
               setResult({ status: "not_found", qrText: decodedText });
             } finally {
               if (mounted) setProcessing(false);
             }
           },
-          undefined
+          (errorMessage: string) => {
+            addLog(`Decode error: ${errorMessage}`);
+          }
         );
         if (mounted) setScanning(true);
       } catch (err: unknown) {
         if (!mounted) return;
         const msg = err instanceof Error ? err.message : String(err);
+        addLog(`Camera start failed: ${msg}`);
         setCameraError(msg.includes("permission") ? "Camera permission denied." : "Could not start camera.");
         setCameraActive(false);
       }
@@ -346,11 +385,33 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
             <span className="material-symbols-outlined text-base">videocam</span>
             Start Camera
           </button>
+          <div className="mt-3 w-full">
+            <div className="flex items-center gap-3 justify-center">
+              <label className="text-xs text-[#888] flex items-center gap-2">
+                <input type="checkbox" className="form-checkbox" checked={showDebug} onChange={(e) => setShowDebug(e.target.checked)} />
+                <span>Show Debug</span>
+              </label>
+
+              <label className="text-xs text-[#888] flex items-center gap-2">
+                <input type="checkbox" className="form-checkbox" checked={fullFrame} onChange={(e) => setFullFrame(e.target.checked)} />
+                <span>Full-frame</span>
+              </label>
+
+              {cameras.length > 0 && (
+                <select value={selectedCamera ?? ""} onChange={(e) => setSelectedCamera(e.target.value || null)} className="bg-[#0f0f0f] text-xs text-[#ccc] px-2 py-1 rounded">
+                  <option value="">Auto</option>
+                  {cameras.map((c) => (
+                    <option key={c.id} value={c.id}>{c.label}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
         </div>
       ) : (
         <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl overflow-hidden">
           <div className="relative">
-            <div id={containerId} className="w-full" />
+            <div id={containerId} className="w-full h-60" />
 
             {processing && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-3">
@@ -388,6 +449,16 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
       )}
 
       {result && <ResultCard result={result} onDismiss={handleDismiss} />}
+
+      {showDebug && (
+        <div className="bg-[#0b0b0b] border border-[#222] rounded-xl p-3 text-xs text-[#ddd] max-h-40 overflow-auto font-mono">
+          {debugLogs.length === 0 ? (
+            <div className="text-[#777]">No debug logs yet.</div>
+          ) : (
+            debugLogs.map((l, i) => <div key={i} className="py-0.5">{l}</div>)
+          )}
+        </div>
+      )}
     </div>
   );
 }
