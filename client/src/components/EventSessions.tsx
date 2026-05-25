@@ -6,7 +6,20 @@ type EventSessionsProps = {
   includeAnchorId?: boolean;
 };
 
-const SESSION_ICONS = ["eco", "manage_accounts", "security", "groups"];
+const getSessionIcon = (index: number): string => {
+  switch (index) {
+    case 0:
+      return "eco";
+    case 1:
+      return "manage_accounts";
+    case 2:
+      return "security";
+    case 3:
+      return "groups";
+    default:
+      return "school";
+  }
+};
 
 /*
   SESSION IMAGE PLACEHOLDERS
@@ -57,7 +70,7 @@ export default function EventSessions({ sectionClassName = "", includeAnchorId =
                   {/* Icon + session number */}
                   <div className="flex items-center justify-between mb-6">
                     <div className="p-4 rounded-2xl bg-[#19D1E6]/10 text-[#19D1E6] group-hover:bg-[#19D1E6] group-hover:text-[#0e0e0e] transition-all duration-300">
-                      <span className="material-symbols-outlined text-2xl">{SESSION_ICONS[index] ?? "school"}</span>
+                      <span className="material-symbols-outlined text-2xl">{getSessionIcon(index)}</span>
                     </div>
                     <span className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#2a2a2a] group-hover:text-[#19D1E6]/20 transition-colors select-none">
                       {String(index + 1).padStart(2, "0")}
