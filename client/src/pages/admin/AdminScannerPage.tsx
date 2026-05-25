@@ -148,98 +148,13 @@ function ResultCard({ result, onDismiss }: { result: ScanResult; onDismiss: () =
 
 // ─── Generic QR Scanner Tab ───────────────────────────────────────────────────
 
-interface CameraDevice {
-  id: string;
-  label: string;
-}
-
 type CameraFacing = "environment" | "user";
-
-function isIOSDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-}
 
 function isMobileViewport(): boolean {
   return typeof window !== "undefined" && window.innerWidth < 768;
 }
 
-async function listCameras(): Promise<CameraDevice[]> {
-  try {
-    // Unlock device labels/enumeration once permission is granted.
-    if (navigator.mediaDevices?.getUserMedia) {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach((track) => track.stop());
-    }
-    const devices = await Html5Qrcode.getCameras();
-    return devices.map((d) => ({ id: d.id, label: d.label || "" }));
-  } catch {
-    try {
-      const devices = await Html5Qrcode.getCameras();
-      return devices.map((d) => ({ id: d.id, label: d.label || "" }));
-    } catch {
-      return [];
-    }
-  }
-}
-
-function buildCameraAttempts(
-  facing: CameraFacing,
-  cameras: CameraDevice[]
-): Array<string | MediaTrackConstraints> {
-  const attempts: Array<string | MediaTrackConstraints> = [];
-  const seen = new Set<string>();
-
-  const add = (input: string | MediaTrackConstraints) => {
-    const key = typeof input === "string" ? input : JSON.stringify(input);
-    if (seen.has(key)) return;
-    seen.add(key);
-    attempts.push(input);
-  };
-
-  const preferred = pickCameraForFacing(facing, cameras);
-  if (preferred) add(preferred);
-
-  add({ facingMode: { ideal: facing } });
-  add({ facingMode: facing });
-
-  for (const camera of cameras) add(camera.id);
-
-  add({ facingMode: { ideal: facing === "environment" ? "user" : "environment" } });
-
-  return attempts;
-}
-
-function cameraStartError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
-  if (msg.toLowerCase().includes("permission")) {
-    return "Camera permission denied. Allow camera access in your browser settings.";
-  }
-  return "Could not start camera. Tap Start Camera and allow access when prompted.";
-}
-
-function pickCameraForFacing(facing: CameraFacing, cameras: CameraDevice[]): string | null {
-  if (!cameras.length) return null;
-
-  const pattern =
-    facing === "environment"
-      ? /back|rear|environment|trás|posteriore|wide/i
-      : /front|user|face|selfie|facetime/i;
-
-  const match = cameras.find((c) => pattern.test(c.label));
-  if (match) return match.id;
-
-  if (cameras.length >= 2) {
-    return facing === "environment" ? cameras[cameras.length - 1].id : cameras[0].id;
-  }
-  return cameras[0].id;
-}
-
 function buildScanConfig() {
-  const ios = isIOSDevice();
   const mobile = isMobileViewport();
   const config: {
     fps: number;
@@ -247,13 +162,12 @@ function buildScanConfig() {
     aspectRatio: number;
     qrbox?: { width: number; height: number };
   } = {
-    fps: ios || mobile ? 10 : 15,
+    fps: mobile ? 10 : 15,
     disableFlip: false,
     aspectRatio: 1.0,
   };
 
-  // Fixed qrbox often breaks the camera preview on mobile browsers
-  if (!ios && !mobile) {
+  if (!mobile) {
     const boxSize = Math.min(260, Math.round(window.innerWidth * 0.65));
     config.qrbox = { width: boxSize, height: boxSize };
   }
@@ -270,6 +184,14 @@ function patchScannerVideo(containerId: string) {
   void video.play().catch(() => {});
 }
 
+function cameraErrorMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.toLowerCase().includes("permission")) {
+    return "Camera access denied. Please allow camera access and try again.";
+  }
+  return "Could not open camera. Please try again.";
+}
+
 function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
   const [authReady, setAuthReady]   = useState(false);
   const [authError, setAuthError]   = useState("");
@@ -280,7 +202,6 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
   const [result, setResult]         = useState<ScanResult | null>(null);
   const [cameraError, setCameraError] = useState("");
   const [facingMode, setFacingMode] = useState<CameraFacing>("environment");
-  const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
   const [switchingCamera, setSwitchingCamera] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const pausedRef  = useRef(false);
@@ -308,7 +229,7 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     }
   }, [mode]);
 
-  const startScanner = useCallback(async (cameraIdOrConfig: string | MediaTrackConstraints) => {
+  const startScanner = useCallback(async (facing: CameraFacing) => {
     const scanner = scannerRef.current ?? new Html5Qrcode(containerId);
     scannerRef.current = scanner;
 
@@ -317,7 +238,7 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     }
 
     await scanner.start(
-      cameraIdOrConfig,
+      { facingMode: facing },
       buildScanConfig(),
       onScanSuccess,
       undefined
@@ -350,12 +271,10 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     setCameraActive(false);
     setStartingCamera(false);
     setFacingMode("environment");
-    setAvailableCameras([]);
     setSwitchingCamera(false);
     pausedRef.current = false;
   }, []);
 
-  // Start camera directly from the tap/click handler — required for iOS Safari
   const handleStartCamera = useCallback(async () => {
     if (!authReady || startingCamera) return;
     setCameraError("");
@@ -364,28 +283,12 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
 
     try {
       scannerRef.current = new Html5Qrcode(containerId);
-      const cameras = await listCameras();
-      const attempts = buildCameraAttempts("environment", cameras);
-
-      let lastErr: unknown;
-      for (const input of attempts) {
-        try {
-          await startScanner(input);
-          setFacingMode("environment");
-          setCameraActive(true);
-          setAvailableCameras(await listCameras());
-          return;
-        } catch (err) {
-          lastErr = err;
-          if (scannerRef.current?.isScanning) {
-            await scannerRef.current.stop().catch(() => {});
-          }
-        }
-      }
-      throw lastErr;
+      await startScanner("environment");
+      setFacingMode("environment");
+      setCameraActive(true);
     } catch (err: unknown) {
       mountedRef.current = false;
-      setCameraError(cameraStartError(err));
+      setCameraError(cameraErrorMessage(err));
       await stopCamera();
     } finally {
       setStartingCamera(false);
@@ -403,28 +306,10 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     setCameraError("");
 
     try {
-      let switched = false;
-      let lastErr: unknown;
-
-      for (const input of buildCameraAttempts(nextFacing, availableCameras)) {
-        try {
-          await startScanner(input);
-          setFacingMode(nextFacing);
-          switched = true;
-          break;
-        } catch (err) {
-          lastErr = err;
-          if (scannerRef.current?.isScanning) {
-            await scannerRef.current.stop().catch(() => {});
-          }
-        }
-      }
-
-      if (!switched) {
-        setCameraError(
-          lastErr ? cameraStartError(lastErr) : "Could not switch camera."
-        );
-      }
+      await startScanner(nextFacing);
+      setFacingMode(nextFacing);
+    } catch (err: unknown) {
+      setCameraError(cameraErrorMessage(err));
     } finally {
       setSwitchingCamera(false);
     }
@@ -434,8 +319,6 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     setResult(null);
     pausedRef.current = false;
   };
-
-  const label = mode === "entry" ? "entry check-in" : "meal service";
 
   return (
     <div className="space-y-4">
@@ -451,7 +334,7 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
               {mode === "entry" ? "Entry QR Scanner" : "Meal QR Scanner"}
             </p>
             <p className="text-[#888] text-sm max-w-xs">
-              Point the camera at a participant's QR ticket to record {label}.
+              Tap Start Camera, allow access when prompted, then point at a participant's QR ticket.
             </p>
           </div>
 
