@@ -198,12 +198,25 @@ function cameraErrorMessage(err: unknown): string {
   return "Could not open camera. Tap Start Camera and allow access when prompted.";
 }
 
-async function waitForContainer(containerId: string): Promise<void> {
-  for (let i = 0; i < 10; i++) {
-    if (document.getElementById(containerId)) return;
+async function waitForVisibleContainer(containerId: string): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    const el = document.getElementById(containerId);
+    if (el && el.offsetWidth > 0 && el.offsetHeight > 0) return;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   }
-  throw new Error(`Scanner container #${containerId} not found`);
+  throw new Error(`Scanner container #${containerId} not visible`);
+}
+
+/** Request permission in the click handler before any React state updates (required on iOS Safari). */
+async function requestCameraAccess(facing: CameraFacing): Promise<void> {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("Camera not supported in this browser");
+  }
+
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: facing } },
+  });
+  stream.getTracks().forEach((track) => track.stop());
 }
 
 async function openCamera(
@@ -327,11 +340,14 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
 
     setCameraError("");
     setStartingCamera(true);
-    mountedRef.current = true;
-    setCameraActive(true);
 
     try {
-      await waitForContainer(containerId);
+      await requestCameraAccess("environment");
+
+      mountedRef.current = true;
+      setCameraActive(true);
+      await waitForVisibleContainer(containerId);
+
       scannerRef.current = new Html5Qrcode(containerId);
       await startScanner("environment");
       setFacingMode("environment");
@@ -355,6 +371,7 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     setCameraError("");
 
     try {
+      await requestCameraAccess(nextFacing);
       await startScanner(nextFacing);
       setFacingMode(nextFacing);
     } catch (err: unknown) {
@@ -371,10 +388,10 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
 
   return (
     <div className="space-y-4">
-      {/* Container must exist in the DOM before Html5Qrcode.start() */}
+      {/* Keep in DOM with real dimensions — display:none breaks camera on mobile Safari */}
       <div
         className={`bg-[#161616] border border-[#2a2a2a] rounded-2xl overflow-hidden ${
-          cameraActive ? "" : "hidden"
+          cameraActive ? "" : "fixed left-[-9999px] top-0 w-[320px] h-[320px] opacity-0 pointer-events-none"
         }`}
       >
         <div className="relative">
