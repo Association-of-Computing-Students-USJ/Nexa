@@ -203,6 +203,8 @@ function ResultCard({ result, onDismiss }: { result: ScanResult; onDismiss: () =
 
 // ─── Generic QR Scanner Tab ───────────────────────────────────────────────────
 
+type CameraFacing = "environment" | "user";
+
 function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
   const [authReady, setAuthReady]   = useState(false);
   const [authError, setAuthError]   = useState("");
@@ -211,15 +213,54 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
   const [processing, setProcessing] = useState(false);
   const [result, setResult]         = useState<ScanResult | null>(null);
   const [cameraError, setCameraError] = useState("");
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const [showDebug, setShowDebug] = useState(false);
-  const [fullFrame, setFullFrame] = useState(true);
-  const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
-  const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<CameraFacing>("environment");
+  const [switchingCamera, setSwitchingCamera] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const pausedRef  = useRef(false);
+  const mountedRef = useRef(false);
 
   const containerId = mode === "entry" ? "qr-entry-container" : "qr-meal-container";
+
+  const getScanConfig = useCallback(() => {
+    const boxSize = Math.min(260, Math.round(window.innerWidth * 0.65));
+    return { fps: 15, qrbox: { width: boxSize, height: boxSize } } as const;
+  }, []);
+
+  const onScanSuccess = useCallback(async (decodedText: string) => {
+    if (pausedRef.current || !mountedRef.current) return;
+    pausedRef.current = true;
+    setProcessing(true);
+
+    try {
+      const res = mode === "entry"
+        ? await processQR(decodedText)
+        : await processMealQR(decodedText);
+      if (!mountedRef.current) return;
+      setResult(res);
+    } catch (err) {
+      console.error("QR processing error:", err);
+      if (!mountedRef.current) return;
+      setResult({ status: "not_found", qrText: decodedText });
+    } finally {
+      if (mountedRef.current) setProcessing(false);
+    }
+  }, [mode]);
+
+  const startScanner = useCallback(async (facing: CameraFacing) => {
+    const scanner = scannerRef.current ?? new Html5Qrcode(containerId);
+    scannerRef.current = scanner;
+
+    if (scanner.isScanning) await scanner.stop();
+
+    await scanner.start(
+      { facingMode: facing },
+      getScanConfig(),
+      onScanSuccess,
+      undefined
+    );
+
+    if (mountedRef.current) setScanning(true);
+  }, [containerId, getScanConfig, onScanSuccess]);
 
   // ── Authenticate once on mount before allowing camera start ──────────────
   useEffect(() => {
@@ -234,89 +275,30 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
     return () => { active = false; };
   }, []);
 
-  // Debug log helper + camera enumeration
-  const addLog = (msg: string) => {
-    const ts = new Date().toLocaleTimeString();
-    const line = `[${ts}] ${msg}`;
-    setDebugLogs((prev) => [line, ...prev].slice(0, 200));
-    console.debug(line);
-  };
-
-  useEffect(() => {
-    let mounted = true;
-    (Html5Qrcode as any).getCameras()
-      .then((cams: Array<{ id: string; label?: string }>) => {
-        if (!mounted) return;
-        const mapped = cams.map((c) => ({ id: c.id, label: c.label || c.id }));
-        setCameras(mapped);
-        if (mapped.length) setSelectedCamera((prev) => prev ?? mapped[0].id);
-        addLog(`Found ${mapped.length} camera(s)`);
-      })
-      .catch((err: unknown) => {
-        addLog(`Could not enumerate cameras: ${String(err)}`);
-      });
-    return () => { mounted = false; };
-  }, []);
-
   const stopCamera = useCallback(async () => {
     try {
-      addLog("Stopping scanner");
       if (scannerRef.current?.isScanning) await scannerRef.current.stop();
       scannerRef.current = null;
     } catch { /* ignore */ }
     setScanning(false);
     setCameraActive(false);
+    setFacingMode("environment");
+    setSwitchingCamera(false);
     pausedRef.current = false;
   }, []);
 
   useEffect(() => {
     if (!cameraActive) return;
-    let mounted = true;
+    mountedRef.current = true;
 
     const start = async () => {
       try {
-        const scanner = new Html5Qrcode(containerId);
-        scannerRef.current = scanner;
-
-        const boxSize = Math.min(260, Math.round(window.innerWidth * 0.65));
-
-        const config: any = { fps: 10, verbose: true, disableFlip: false };
-        if (!fullFrame) config.qrbox = { width: boxSize, height: boxSize };
-
-        addLog(`Starting scanner (camera=${selectedCamera ?? 'auto'} fullFrame=${fullFrame})`);
-
-        await scanner.start(
-          selectedCamera ?? { facingMode: "environment" },
-          config,
-          async (decodedText: string) => {
-            addLog(`Decoded text: ${decodedText}`);
-            if (pausedRef.current || !mounted) return;
-            pausedRef.current = true;
-            setProcessing(true);
-
-            try {
-              const res = mode === "entry"
-                ? await processQR(decodedText)
-                : await processMealQR(decodedText);
-              if (!mounted) return;
-              setResult(res);
-            } catch (err) {
-              addLog(`QR processing error: ${String(err)}`);
-              if (!mounted) return;
-              setResult({ status: "not_found", qrText: decodedText });
-            } finally {
-              if (mounted) setProcessing(false);
-            }
-          },
-          (errorMessage: string) => {
-            addLog(`Decode error: ${errorMessage}`);
-          }
-        );
-        if (mounted) setScanning(true);
+        scannerRef.current = new Html5Qrcode(containerId);
+        await startScanner("environment");
+        setFacingMode("environment");
       } catch (err: unknown) {
-        if (!mounted) return;
+        if (!mountedRef.current) return;
         const msg = err instanceof Error ? err.message : String(err);
-        addLog(`Camera start failed: ${msg}`);
         setCameraError(msg.includes("permission") ? "Camera permission denied." : "Could not start camera.");
         setCameraActive(false);
       }
@@ -324,12 +306,31 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
 
     const t = setTimeout(start, 80);
     return () => {
-      mounted = false;
+      mountedRef.current = false;
       clearTimeout(t);
     };
-  }, [cameraActive, containerId, mode]);
+  }, [cameraActive, containerId, startScanner]);
 
   useEffect(() => () => { stopCamera(); }, [stopCamera]);
+
+  const handleFlipCamera = async () => {
+    if (switchingCamera || processing) return;
+
+    const nextFacing: CameraFacing = facingMode === "environment" ? "user" : "environment";
+    setSwitchingCamera(true);
+    setScanning(false);
+
+    try {
+      await startScanner(nextFacing);
+      setFacingMode(nextFacing);
+      setCameraError("");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setCameraError(msg.includes("permission") ? "Camera permission denied." : "Could not switch camera.");
+    } finally {
+      setSwitchingCamera(false);
+    }
+  };
 
   const handleDismiss = () => {
     setResult(null);
@@ -385,33 +386,11 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
             <span className="material-symbols-outlined text-base">videocam</span>
             Start Camera
           </button>
-          <div className="mt-3 w-full">
-            <div className="flex items-center gap-3 justify-center">
-              <label className="text-xs text-[#888] flex items-center gap-2">
-                <input type="checkbox" className="form-checkbox" checked={showDebug} onChange={(e) => setShowDebug(e.target.checked)} />
-                <span>Show Debug</span>
-              </label>
-
-              <label className="text-xs text-[#888] flex items-center gap-2">
-                <input type="checkbox" className="form-checkbox" checked={fullFrame} onChange={(e) => setFullFrame(e.target.checked)} />
-                <span>Full-frame</span>
-              </label>
-
-              {cameras.length > 0 && (
-                <select value={selectedCamera ?? ""} onChange={(e) => setSelectedCamera(e.target.value || null)} className="bg-[#0f0f0f] text-xs text-[#ccc] px-2 py-1 rounded">
-                  <option value="">Auto</option>
-                  {cameras.map((c) => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
         </div>
       ) : (
         <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl overflow-hidden">
           <div className="relative">
-            <div id={containerId} className="w-full h-60" />
+            <div id={containerId} className="w-full" />
 
             {processing && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-3">
@@ -420,6 +399,16 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
                 </svg>
                 <p className="text-white text-sm font-medium">Verifying…</p>
+              </div>
+            )}
+
+            {switchingCamera && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-3">
+                <svg className="animate-spin h-8 w-8 text-[#19D1E6]" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+                </svg>
+                <p className="text-white text-sm font-medium">Switching camera…</p>
               </div>
             )}
 
@@ -437,28 +426,28 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
               )}
             </div>
 
-            <button
-              onClick={stopCamera}
-              className="absolute top-3 right-3 p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-red-400 transition-colors"
-              title="Stop camera"
-            >
-              <span className="material-symbols-outlined text-base">videocam_off</span>
-            </button>
+            <div className="absolute top-3 right-3 flex items-center gap-2">
+              <button
+                onClick={handleFlipCamera}
+                disabled={switchingCamera || processing}
+                className="p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-[#19D1E6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                title={facingMode === "environment" ? "Switch to front camera" : "Switch to back camera"}
+              >
+                <span className="material-symbols-outlined text-base">flip_camera_ios</span>
+              </button>
+              <button
+                onClick={stopCamera}
+                className="p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-red-400 transition-colors"
+                title="Stop camera"
+              >
+                <span className="material-symbols-outlined text-base">videocam_off</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {result && <ResultCard result={result} onDismiss={handleDismiss} />}
-
-      {showDebug && (
-        <div className="bg-[#0b0b0b] border border-[#222] rounded-xl p-3 text-xs text-[#ddd] max-h-40 overflow-auto font-mono">
-          {debugLogs.length === 0 ? (
-            <div className="text-[#777]">No debug logs yet.</div>
-          ) : (
-            debugLogs.map((l, i) => <div key={i} className="py-0.5">{l}</div>)
-          )}
-        </div>
-      )}
     </div>
   );
 }
