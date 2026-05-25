@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 import nexaLogo from "../assets/images/logo/NEXA Colour.png";
 import CustomCursor from "../components/CustomCursor";
-import { ensureFirebaseAuth } from "../lib/firebaseAuth";
+import { ensureFirebaseAuth, firebaseAuthErrorMessage, signOutAdmin } from "../lib/firebaseAuth";
 import { ADMIN_SESSION_KEY } from "../pages/admin/AdminLoginPage";
 import { RegistrationsProvider, useRegistrations } from "../context/RegistrationsContext";
 
@@ -55,7 +55,9 @@ export default function AdminLayout() {
 
   function handleLogout() {
     sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    navigate("/admin/login", { replace: true });
+    void signOutAdmin().finally(() => {
+      navigate("/admin/login", { replace: true });
+    });
   }
 
   return (

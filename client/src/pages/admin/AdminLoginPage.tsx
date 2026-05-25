@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
 import CustomCursor from "../../components/CustomCursor";
 import { auth } from "../../lib/firebase";
+import { firebaseAuthErrorMessage } from "../../lib/firebaseAuth";
 
 export const ADMIN_SESSION_KEY = "nexa_admin_auth";
 
@@ -31,8 +32,9 @@ export default function AdminLoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
       navigate("/admin/dashboard", { replace: true });
-    } catch {
-      setError("Firebase sign-in failed. Check your email/password and ensure Email/Password auth is enabled.");
+    } catch (err: unknown) {
+      const code = (err as { code?: string })?.code ?? "auth/unknown";
+      setError(firebaseAuthErrorMessage(code));
       setLoading(false);
     }
   }

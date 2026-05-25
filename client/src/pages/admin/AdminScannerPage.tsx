@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, type MutableRefObject } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Timestamp } from "firebase/firestore";
 import { checkInEntry, checkInMeal } from "../../lib/checkIn";
 import { useRegistrations } from "../../context/RegistrationsContext";
-import { ensureFirebaseAuth } from "../../lib/firebaseAuth";
+import { ensureFirebaseAuth, firebaseAuthErrorMessage } from "../../lib/firebaseAuth";
 import type { ParticipantScan } from "../../types/participant";
 
 type ScanStatus =
@@ -185,11 +185,67 @@ function patchScannerVideo(containerId: string) {
 }
 
 function cameraErrorMessage(err: unknown): string {
-  const msg = err instanceof Error ? err.message : String(err);
-  if (msg.toLowerCase().includes("permission")) {
-    return "Camera access denied. Please allow camera access and try again.";
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    return "Camera needs HTTPS. Open the deployed site (not http:// on your phone).";
   }
-  return "Could not open camera. Please try again.";
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.toLowerCase().includes("permission") || msg.toLowerCase().includes("notallowed")) {
+    return "Camera access denied. Allow camera access and try again.";
+  }
+  if (msg.toLowerCase().includes("notfound") || msg.toLowerCase().includes("devicesnotfound")) {
+    return "No camera found on this device.";
+  }
+  return "Could not open camera. Tap Start Camera and allow access when prompted.";
+}
+
+async function waitForContainer(containerId: string): Promise<void> {
+  for (let i = 0; i < 10; i++) {
+    if (document.getElementById(containerId)) return;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  }
+  throw new Error(`Scanner container #${containerId} not found`);
+}
+
+async function openCamera(
+  containerId: string,
+  facing: CameraFacing,
+  onScanSuccess: (text: string) => void,
+  scannerRef: MutableRefObject<Html5Qrcode | null>
+): Promise<void> {
+  const attempts: Array<string | MediaTrackConstraints> = [
+    { facingMode: { ideal: facing } },
+    { facingMode: facing },
+    { facingMode: { ideal: facing === "environment" ? "user" : "environment" } },
+    { facingMode: "user" },
+  ];
+
+  try {
+    const cameras = await Html5Qrcode.getCameras();
+    for (const camera of cameras) {
+      attempts.unshift(camera.id);
+    }
+  } catch {
+    // Permission may not be granted yet — fall through to facingMode attempts.
+  }
+
+  const scanner = scannerRef.current ?? new Html5Qrcode(containerId);
+  scannerRef.current = scanner;
+
+  let lastErr: unknown;
+  for (const input of attempts) {
+    try {
+      if (scanner.isScanning) await scanner.stop().catch(() => {});
+
+      await scanner.start(input, buildScanConfig(), onScanSuccess, undefined);
+      patchScannerVideo(containerId);
+      return;
+    } catch (err) {
+      lastErr = err;
+      if (scanner.isScanning) await scanner.stop().catch(() => {});
+    }
+  }
+
+  throw lastErr ?? new Error("Could not open camera");
 }
 
 function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
@@ -230,21 +286,7 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
   }, [mode]);
 
   const startScanner = useCallback(async (facing: CameraFacing) => {
-    const scanner = scannerRef.current ?? new Html5Qrcode(containerId);
-    scannerRef.current = scanner;
-
-    if (scanner.isScanning) {
-      await scanner.stop().catch(() => {});
-    }
-
-    await scanner.start(
-      { facingMode: facing },
-      buildScanConfig(),
-      onScanSuccess,
-      undefined
-    );
-
-    patchScannerVideo(containerId);
+    await openCamera(containerId, facing, onScanSuccess, scannerRef);
     if (mountedRef.current) setScanning(true);
   }, [containerId, onScanSuccess]);
 
@@ -255,8 +297,8 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
       .then(() => { if (active) setAuthReady(true); })
       .catch((err) => {
         if (!active) return;
-        const code = (err as { code?: string })?.code ?? String(err);
-        setAuthError(`Firebase Auth failed (${code}). Check your .env credentials.`);
+        const code = (err as { code?: string })?.code ?? "auth/unknown";
+        setAuthError(firebaseAuthErrorMessage(code));
       });
     return () => { active = false; };
   }, []);
@@ -277,15 +319,22 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
 
   const handleStartCamera = useCallback(async () => {
     if (!authReady || startingCamera) return;
+
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setCameraError(cameraErrorMessage(new Error("insecure")));
+      return;
+    }
+
     setCameraError("");
     setStartingCamera(true);
     mountedRef.current = true;
+    setCameraActive(true);
 
     try {
+      await waitForContainer(containerId);
       scannerRef.current = new Html5Qrcode(containerId);
       await startScanner("environment");
       setFacingMode("environment");
-      setCameraActive(true);
     } catch (err: unknown) {
       mountedRef.current = false;
       setCameraError(cameraErrorMessage(err));
@@ -322,6 +371,71 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
 
   return (
     <div className="space-y-4">
+      {/* Container must exist in the DOM before Html5Qrcode.start() */}
+      <div
+        className={`bg-[#161616] border border-[#2a2a2a] rounded-2xl overflow-hidden ${
+          cameraActive ? "" : "hidden"
+        }`}
+      >
+        <div className="relative">
+          <div id={containerId} className="qr-scanner-view w-full min-h-[280px] sm:min-h-[320px]" />
+
+          {(startingCamera || switchingCamera) && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-3">
+              <svg className="animate-spin h-8 w-8 text-[#19D1E6]" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+              </svg>
+              <p className="text-white text-sm font-medium">
+                {switchingCamera ? "Switching camera…" : "Opening camera…"}
+              </p>
+            </div>
+          )}
+
+          {processing && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-3">
+              <svg className="animate-spin h-8 w-8 text-[#19D1E6]" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+              </svg>
+              <p className="text-white text-sm font-medium">Verifying…</p>
+            </div>
+          )}
+
+          <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10">
+            {scanning ? (
+              <>
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                <span className="text-white text-xs font-medium">Scanning…</span>
+              </>
+            ) : (
+              <>
+                <span className="w-2 h-2 bg-amber-400 rounded-full" />
+                <span className="text-white text-xs font-medium">Starting…</span>
+              </>
+            )}
+          </div>
+
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            <button
+              onClick={handleFlipCamera}
+              disabled={switchingCamera || processing || !scanning}
+              className="p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-[#19D1E6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title={facingMode === "environment" ? "Switch to front camera" : "Switch to back camera"}
+            >
+              <span className="material-symbols-outlined text-base">flip_camera_ios</span>
+            </button>
+            <button
+              onClick={() => void stopCamera()}
+              className="p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-red-400 transition-colors"
+              title="Stop camera"
+            >
+              <span className="material-symbols-outlined text-base">videocam_off</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {!cameraActive ? (
         <div className="flex flex-col items-center gap-4 py-12 bg-[#161616] border border-[#2a2a2a] rounded-2xl">
           <div className={`p-5 rounded-2xl ${mode === "entry" ? "bg-[#19D1E6]/10 text-[#19D1E6]" : "bg-orange-500/10 text-orange-400"}`}>
@@ -375,64 +489,10 @@ function ScannerTab({ mode }: { mode: "entry" | "meal" }) {
             {startingCamera ? "Starting…" : "Start Camera"}
           </button>
         </div>
-      ) : (
-        <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl overflow-hidden">
-          <div className="relative">
-            <div id={containerId} className="qr-scanner-view w-full min-h-[280px] sm:min-h-[320px]" />
+      ) : null}
 
-            {processing && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-3">
-                <svg className="animate-spin h-8 w-8 text-[#19D1E6]" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
-                </svg>
-                <p className="text-white text-sm font-medium">Verifying…</p>
-              </div>
-            )}
-
-            {switchingCamera && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-sm gap-3">
-                <svg className="animate-spin h-8 w-8 text-[#19D1E6]" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
-                </svg>
-                <p className="text-white text-sm font-medium">Switching camera…</p>
-              </div>
-            )}
-
-            <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm border border-white/10">
-              {scanning ? (
-                <>
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                  <span className="text-white text-xs font-medium">Scanning…</span>
-                </>
-              ) : (
-                <>
-                  <span className="w-2 h-2 bg-amber-400 rounded-full" />
-                  <span className="text-white text-xs font-medium">Starting…</span>
-                </>
-              )}
-            </div>
-
-            <div className="absolute top-3 right-3 flex items-center gap-2">
-              <button
-                onClick={handleFlipCamera}
-                disabled={switchingCamera || processing}
-                className="p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-[#19D1E6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                title={facingMode === "environment" ? "Switch to front camera" : "Switch to back camera"}
-              >
-                <span className="material-symbols-outlined text-base">flip_camera_ios</span>
-              </button>
-              <button
-                onClick={stopCamera}
-                className="p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/10 text-white hover:text-red-400 transition-colors"
-                title="Stop camera"
-              >
-                <span className="material-symbols-outlined text-base">videocam_off</span>
-              </button>
-            </div>
-          </div>
-        </div>
+      {cameraActive && cameraError && (
+        <p className="text-red-400 text-sm text-center px-4">{cameraError}</p>
       )}
 
       {result && <ResultCard result={result} onDismiss={handleDismiss} />}
