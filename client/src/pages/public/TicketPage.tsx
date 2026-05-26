@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import QRCodeStyling from "qr-code-styling";
 import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
+import { EVENT_DATE } from "../../data/eventInfo";
 
 interface TicketData {
   id: string;
@@ -106,7 +107,7 @@ export default function TicketPage() {
           {/* Event info grid */}
           <div className="px-6 sm:px-8 py-5 grid grid-cols-2 gap-y-4">
             {[
-              { label: "Date",        value: "June 2026" },
+              { label: "Date",        value: EVENT_DATE },
               { label: "Venue",       value: "USJP, Sri Lanka" },
               { label: "Access",      value: "All-Access Pass" },
               { label: "Ticket ID",   value: shortId, accent: true },

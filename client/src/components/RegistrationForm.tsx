@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
+import { EVENT_DATE } from "../data/eventInfo";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -84,7 +85,7 @@ function buildEmailHtml(t: TicketData): string {
         <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Year</td>
             <td style="padding:7px 0;color:#fff;font-size:14px;">${t.year}</td></tr>
         <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Event Date</td>
-            <td style="padding:7px 0;color:#fff;font-size:14px;">June 2026</td></tr>
+            <td style="padding:7px 0;color:#fff;font-size:14px;">${EVENT_DATE}</td></tr>
         <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Venue</td>
             <td style="padding:7px 0;color:#fff;font-size:14px;">USJP, Sri Lanka</td></tr>
         <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Access</td>

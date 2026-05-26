@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Reveal from "../../components/Reveal";
 import EventSessions from "../../components/EventSessions";
+import EventSpeakers from "../../components/EventSpeakers";
 import CustomCursor from "../../components/CustomCursor";
 import { useSmoothScroll } from "../../hooks/useSmoothScroll";
 import { useCountUp } from "../../hooks/useCountUp";
@@ -17,12 +18,14 @@ import thiranImage from "../../assets/images/committee/thiran.png";
 import rumethImage from "../../assets/images/committee/rumeeth.png";
 import usjpLogo from "../../assets/images/logo/usjp.png";
 import acsLogo from "../../assets/images/logo/ACS.png";
+import { EVENT_DATE } from "../../data/eventInfo";
 
 /* ─── Data ───────────────────────────────────────────────── */
 
 const NAV_LINKS = [
   { href: "#about",    label: "About",    section: "about"    },
   { href: "#sessions", label: "Sessions", section: "sessions" },
+  { href: "#speakers", label: "Speakers", section: "speakers" },
   { href: "#contact",  label: "Committee", section: "contact"  },
 ];
 
@@ -238,7 +241,7 @@ export default function HomePage() {
         {/* ═══════════════════════════════════════════════════
             HERO — full-bleed image
             ═══════════════════════════════════════════════════ */}
-        <section className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+        <section className="relative min-h-[100dvh] min-h-screen flex flex-col overflow-hidden">
 
           {/* Background image with parallax */}
           <div className="absolute inset-0 overflow-hidden">
@@ -247,93 +250,97 @@ export default function HomePage() {
               src={heroImage}
               alt=""
               aria-hidden="true"
-              className="w-full h-full object-cover object-center will-change-transform"
+              className="w-full h-full object-cover object-[center_30%] sm:object-center will-change-transform"
               style={{ transform: "scale(1.08) translateY(0px)" }}
             />
-            {/* Multi-layer overlay for strong text contrast */}
-            {/* 1. Dark base wash over entire image */}
             <div className="absolute inset-0 bg-black/50" />
-            {/* 2. Deep gradient: stronger at top & bottom, lighter in middle */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-black/70" />
-            {/* 3. Subtle radial vignette around edges */}
-            <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.55) 100%)" }} />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-black/75" />
+            <div
+              className="absolute inset-0"
+              style={{ background: "radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.55) 100%)" }}
+            />
           </div>
 
-          {/* Content */}
-          <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-28 sm:pt-24 sm:pb-32 md:pb-36 flex flex-col items-center text-center">
+          {/* Content — centered stack with room for bottom marquee */}
+          <div className="relative z-10 flex flex-1 flex-col items-center justify-center w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-[calc(5.5rem+env(safe-area-inset-top,0px))] pb-24 sm:pb-28 md:pb-32 text-center">
 
-            {/* Badge */}
-            <Reveal variant="fade-up">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#19D1E6]/50 bg-[#19D1E6]/15 backdrop-blur-md mb-8">
-                <span className="w-2 h-2 bg-[#19D1E6] rounded-full animate-pulse" />
-                <span className="text-sm font-semibold text-[#19D1E6] tracking-wide">Early Bird Registration Open</span>
-              </div>
-            </Reveal>
-
-            {/* Headline */}
-            <Reveal variant="fade-up" delayMs={80}>
-              <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-[5.5rem] font-bold leading-[0.92] tracking-tight text-white mb-6"
-                style={{ textShadow: "0 2px 40px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.8)" }}>
-                Building Tomorrow's
-                <span className="block text-[#19D1E6]"
-                  style={{ textShadow: "0 0 60px rgba(25,209,230,0.5), 0 2px 20px rgba(0,0,0,0.5)" }}>
+            <Reveal variant="fade-up" delayMs={80} className="w-full">
+              <h1
+                className="mx-auto max-w-[12ch] sm:max-w-none text-[clamp(2.25rem,9.5vw,5.5rem)] sm:text-5xl md:text-7xl lg:text-[5.5rem] font-bold leading-[0.95] sm:leading-[0.92] tracking-tight text-white mb-5 sm:mb-6"
+                style={{ textShadow: "0 2px 40px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.8)" }}
+              >
+                Building Tomorrow&apos;s
+                <span
+                  className="block text-[#19D1E6] mt-1"
+                  style={{ textShadow: "0 0 60px rgba(25,209,230,0.5), 0 2px 20px rgba(0,0,0,0.5)" }}
+                >
                   Leaders.
                 </span>
               </h1>
             </Reveal>
 
-            {/* Event meta */}
-            <Reveal variant="fade-up" delayMs={200}>
-              <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2 sm:gap-3 text-white/75 text-xs font-semibold tracking-[0.14em] uppercase mb-10">
-                <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[#19D1E6] text-sm">calendar_today</span>
-                  June 2026
-                </span>
-                <span className="hidden sm:inline text-white/30">·</span>
-                <span className="flex items-center gap-1.5">
+            <Reveal variant="fade-up" delayMs={200} className="w-full">
+              <ul className="mx-auto mb-8 sm:mb-10 flex w-full max-w-sm sm:max-w-none flex-col items-center gap-2.5 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-x-3 sm:gap-y-2 text-white/80 text-[11px] sm:text-xs font-semibold tracking-[0.08em] sm:tracking-[0.14em] uppercase">
+                <li className="flex items-center justify-center gap-1.5 text-center">
+                  <span className="material-symbols-outlined text-[#19D1E6] text-sm shrink-0">calendar_today</span>
+                  <span>{EVENT_DATE}</span>
+                </li>
+                <li className="hidden sm:block text-white/30" aria-hidden="true">·</li>
+                <li className="flex items-center justify-center gap-1.5 text-center">
                   <span className="material-symbols-outlined text-[#19D1E6] text-sm shrink-0">location_on</span>
                   <span className="sm:hidden">USJP, Sri Lanka</span>
                   <span className="hidden sm:inline">University of Sri Jayewardenepura</span>
-                </span>
-                <span className="hidden sm:inline text-white/30">·</span>
-                <span className="flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[#19D1E6] text-sm">group</span>
-                  300+ Attendees
-                </span>
-              </div>
+                </li>
+                <li className="hidden sm:block text-white/30" aria-hidden="true">·</li>
+                <li className="flex items-center justify-center gap-1.5">
+                  <span className="material-symbols-outlined text-[#19D1E6] text-sm shrink-0">group</span>
+                  <span>300+ Attendees</span>
+                </li>
+              </ul>
             </Reveal>
 
-            {/* CTAs */}
-            <Reveal variant="fade-up" delayMs={300}>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/register" data-cursor="Register"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-base hover:bg-[#19D1E6]/90 transition-all duration-300 hover:scale-105 glow shadow-2xl">
+            <Reveal variant="fade-up" delayMs={300} className="w-full flex justify-center">
+              <div className="flex w-full max-w-xs sm:max-w-none flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
+                <Link
+                  to="/register"
+                  data-cursor="Register"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-sm sm:text-base hover:bg-[#19D1E6]/90 transition-all duration-300 hover:scale-105 glow shadow-2xl"
+                >
                   Register Now
                   <span className="material-symbols-outlined text-[1.1rem]">arrow_forward</span>
                 </Link>
-                <a href="#sessions" data-cursor="View"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold rounded-full text-base hover:bg-white/20 hover:border-white/50 transition-all duration-300">
+                <a
+                  href="#sessions"
+                  data-cursor="View"
+                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold rounded-full text-sm sm:text-base hover:bg-white/20 hover:border-white/50 transition-all duration-300"
+                >
                   Explore Sessions
                 </a>
               </div>
             </Reveal>
           </div>
 
-          {/* Scroll cue — sits above the marquee strip */}
-          <div className="absolute bottom-16 sm:bottom-14 left-1/2 -translate-x-1/2 z-10">
-            <a href="#about" data-cursor="Scroll"
-              className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors">
+          {/* Scroll cue — above marquee, hidden on very short viewports */}
+          <div className="absolute bottom-[3.75rem] sm:bottom-14 left-1/2 z-10 -translate-x-1/2 hidden min-[580px]:flex">
+            <a
+              href="#about"
+              data-cursor="Scroll"
+              className="flex flex-col items-center gap-1 text-white/50 hover:text-white transition-colors"
+              aria-label="Scroll to about section"
+            >
               <span className="material-symbols-outlined animate-bounce text-3xl drop-shadow-lg">keyboard_arrow_down</span>
             </a>
           </div>
 
           {/* Marquee strip */}
-          <div className="absolute bottom-0 left-0 right-0 bg-black/40 backdrop-blur-md border-t border-white/10 py-3.5 overflow-hidden">
-            <div className="animate-marquee flex gap-16 whitespace-nowrap">
+          <div className="absolute bottom-0 left-0 right-0 z-10 bg-black/40 backdrop-blur-md border-t border-white/10 py-3 sm:py-3.5 overflow-hidden">
+            <div className="animate-marquee flex gap-10 sm:gap-16 whitespace-nowrap">
               {[...Array(2)].map((_, i) => (
-                <div key={i} className="flex shrink-0 gap-16">
+                <div key={i} className="flex shrink-0 gap-10 sm:gap-16">
                   {["NEXA 2026", "ACS × USJP", "INNOVATION", "TECH TALKS", "NETWORKING", "KNOWLEDGE TRANSFER"].map(t => (
-                    <span key={t} className="text-xs font-bold tracking-[0.22em] text-white/40">{t} •</span>
+                    <span key={t} className="text-[10px] sm:text-xs font-bold tracking-[0.18em] sm:tracking-[0.22em] text-white/40">
+                      {t} •
+                    </span>
                   ))}
                 </div>
               ))}
@@ -424,6 +431,14 @@ export default function HomePage() {
         <EventSessions
           includeAnchorId
           sectionClassName="relative py-16 md:py-32 bg-[#0e0e0e] overflow-hidden scroll-mt-20"
+        />
+
+        {/* ═══════════════════════════════════════════════════
+            SPEAKERS — light section
+            ═══════════════════════════════════════════════════ */}
+        <EventSpeakers
+          includeAnchorId
+          sectionClassName="relative py-16 md:py-32 bg-white overflow-hidden scroll-mt-20"
         />
 
 
@@ -649,7 +664,7 @@ export default function HomePage() {
             <div>
               <h4 className="font-semibold text-white mb-4 text-sm">Summit</h4>
               <ul className="space-y-3">
-                {[["About", "#about"], ["Sessions", "#sessions"], ["Committee", "#contact"], ["Register", "/register"]].map(([l, h]) => (
+                {[["About", "#about"], ["Sessions", "#sessions"], ["Speakers", "#speakers"], ["Committee", "#contact"], ["Register", "/register"]].map(([l, h]) => (
                   <li key={l}><a href={h} className="text-[#888888] text-sm hover:text-[#19D1E6] transition-colors">{l}</a></li>
                 ))}
               </ul>

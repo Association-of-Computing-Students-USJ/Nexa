@@ -2,12 +2,13 @@ import { Link } from "react-router-dom";
 import Reveal from "../../components/Reveal";
 import RegistrationForm from "../../components/RegistrationForm";
 import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
+import { EVENT_DATE } from "../../data/eventInfo";
 
 const EVENT_INFO = [
   {
     icon: "calendar_today",
     label: "Event Date",
-    value: "June 2026",
+    value: EVENT_DATE,
     sub: "One action-packed day",
   },
   {
@@ -53,7 +54,7 @@ export default function RegisterPage() {
             <Reveal variant="fade-up">
               <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full border border-[#19D1E6]/30 bg-[#19D1E6]/8 mb-6 sm:mb-8">
                 <span className="w-2 h-2 bg-[#19D1E6] rounded-full animate-pulse shrink-0" />
-                <span className="text-xs sm:text-sm font-medium text-[#19D1E6]">Registration Now Open — June 2026</span>
+                <span className="text-xs sm:text-sm font-medium text-[#19D1E6]">Registration Now Open — {EVENT_DATE}</span>
               </div>
             </Reveal>
 

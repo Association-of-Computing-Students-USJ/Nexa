@@ -40,6 +40,11 @@ export default function PublicLayout() {
               data-cursor="View">
               Sessions
             </Link>
+            <Link to="/#speakers"
+              className="text-sm font-medium text-gray-600 hover:text-[#19D1E6] transition-colors"
+              data-cursor="View">
+              Speakers
+            </Link>
             <Link to="/register"
               className="px-5 py-2.5 bg-[#19D1E6] text-[#0e0e0e] font-semibold text-sm rounded-full hover:bg-[#19D1E6]/90 transition-all hover:scale-105 glow"
               data-cursor="Register">
@@ -71,6 +76,10 @@ export default function PublicLayout() {
           <Link to="/#sessions" onClick={() => setMenuOpen(false)}
             className="text-3xl font-semibold text-gray-900 hover:text-[#19D1E6] transition-colors">
             Sessions
+          </Link>
+          <Link to="/#speakers" onClick={() => setMenuOpen(false)}
+            className="text-3xl font-semibold text-gray-900 hover:text-[#19D1E6] transition-colors">
+            Speakers
           </Link>
           <Link to="/register" onClick={() => setMenuOpen(false)}
             className="px-8 py-3 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-full text-lg glow">
