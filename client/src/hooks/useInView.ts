@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type RefObject } from "react";
+
+type UseInViewOptions = IntersectionObserverInit & { once?: boolean };
 
 // Small IntersectionObserver hook for scroll-reveal animations.
 export function useInView<T extends Element>(
-  ref: React.RefObject<T | null>,
-  options: IntersectionObserverInit & { once?: boolean } = {}
+  ref: RefObject<T | null>,
+  options: UseInViewOptions = {}
 ) {
-  const { once = true, ...io } = options;
+  const { once = true, root = null, rootMargin, threshold } = options;
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
@@ -19,12 +21,11 @@ export function useInView<T extends Element>(
       } else if (!once) {
         setInView(false);
       }
-    }, io);
+    }, { root, rootMargin, threshold });
 
     obs.observe(el);
     return () => obs.disconnect();
-  }, [ref, once, io.root, io.rootMargin, io.threshold]);
+  }, [ref, once, root, rootMargin, threshold]);
 
   return inView;
 }
-

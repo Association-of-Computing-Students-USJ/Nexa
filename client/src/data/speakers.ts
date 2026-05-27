@@ -7,6 +7,8 @@ export interface Speaker {
   description: string;
   /** Omit or leave empty for a photo placeholder. */
   image?: string;
+  /** When false, the card shows a “to be announced” state. Defaults to true. */
+  announced?: boolean;
 }
 
 /**
@@ -15,7 +17,7 @@ export interface Speaker {
 export const SPEAKERS: Speaker[] = [
   {
     id: "prabodha",
-    name: "Prabodha Lakshan",
+    name: "Mr. Prabodha Lakshan",
     position: "Company Director & Social Media strategist",
     description:
       "World Biggest Marketplace - Social Media: Winning the Gen Z Audience in the Digital Era",
@@ -23,20 +25,23 @@ export const SPEAKERS: Speaker[] = [
   },
   {
     id: "speaker-2",
-    name: "Speaker Name",
-    position: "Position TBA",
-    description: "Session details coming soon.",
+    name: "To be announced soon",
+    position: "",
+    description: "",
+    announced: false,
   },
   {
     id: "speaker-3",
-    name: "Speaker Name",
-    position: "Position TBA",
-    description: "Session details coming soon.",
+    name: "To be announced soon",
+    position: "",
+    description: "",
+    announced: false,
   },
   {
     id: "speaker-4",
-    name: "Speaker Name",
-    position: "Position TBA",
-    description: "Session details coming soon.",
+    name: "To be announced soon",
+    position: "",
+    description: "",
+    announced: false,
   },
 ];

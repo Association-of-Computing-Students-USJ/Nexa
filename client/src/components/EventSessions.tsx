@@ -1,4 +1,5 @@
 import Reveal from "./Reveal";
+import LazyImage from "./LazyImage";
 import { SESSION_CARDS } from "../data/sessionCards";
 
 type EventSessionsProps = {
@@ -35,7 +36,7 @@ const getSessionIcon = (index: number): string => {
 
 export default function EventSessions({ sectionClassName = "", includeAnchorId = false }: EventSessionsProps) {
   return (
-    <section id={includeAnchorId ? "sessions" : undefined} className={sectionClassName}>
+    <section id={includeAnchorId ? "sessions" : undefined} className={`section-deferred ${sectionClassName}`}>
       {/* Subtle top glow */}
       <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-[#19D1E6]/5 rounded-full blur-3xl pointer-events-none" />
 
@@ -87,12 +88,14 @@ export default function EventSessions({ sectionClassName = "", includeAnchorId =
                   <div className="relative h-48 mb-6 rounded-2xl overflow-hidden bg-[#111]">
                     {card.img ? (
                       <>
-                        <img
+                        <LazyImage
                           src={card.img}
                           alt={card.title}
-                          className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700"
+                          skeletonDark
+                          className="absolute inset-0"
+                          imgClassName="w-full h-full object-cover opacity-70 group-hover:opacity-90 group-hover:scale-105 transition-all duration-700"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-[#111]/20 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-[#111]/20 to-transparent pointer-events-none" />
                       </>
                     ) : (
                       /* Placeholder shown when img is empty */

@@ -1,29 +1,51 @@
 import { useEffect } from "react";
-import Lenis from "lenis";
 
 /**
- * Attaches a Lenis smooth-scroll instance to the page.
- * Call once at the root of the app you want smooth scrolling on.
+ * Attaches a Lenis smooth-scroll instance after idle time so initial paint stays fast.
  */
 export function useSmoothScroll() {
   useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.15,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      smoothWheel: true,
-      touchMultiplier: 1.8,
-    });
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
+    let lenis: { raf: (time: number) => void; destroy: () => void } | null = null;
     let raf = 0;
-    function tick(time: number) {
-      lenis.raf(time);
-      raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
+    let cancelled = false;
 
+    const start = () => {
+      import("lenis").then(({ default: Lenis }) => {
+        if (cancelled) return;
+
+        lenis = new Lenis({
+          duration: 1.15,
+          easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          smoothWheel: true,
+          touchMultiplier: 1.8,
+        });
+
+        function tick(time: number) {
+          lenis?.raf(time);
+          raf = requestAnimationFrame(tick);
+        }
+        raf = requestAnimationFrame(tick);
+      });
+    };
+
+    if ("requestIdleCallback" in window) {
+      const idleId = requestIdleCallback(start, { timeout: 2500 });
+      return () => {
+        cancelled = true;
+        cancelIdleCallback(idleId);
+        cancelAnimationFrame(raf);
+        lenis?.destroy();
+      };
+    }
+
+    const timer = window.setTimeout(start, 400);
     return () => {
+      cancelled = true;
+      clearTimeout(timer);
       cancelAnimationFrame(raf);
-      lenis.destroy();
+      lenis?.destroy();
     };
   }, []);
 }
