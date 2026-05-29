@@ -62,6 +62,16 @@ export default function CommitteeSection() {
                     {member.name}
                   </h3>
                   <p className="text-[#888888] text-[10px] sm:text-xs mt-0.5 truncate">{member.role}</p>
+                  {member.phone && (
+                    <a
+                      href={`tel:+94${member.phone.slice(1)}`}
+                      className="inline-flex items-center gap-1 mt-1.5 text-[10px] sm:text-xs text-[#19D1E6] hover:text-[#19D1E6]/70 transition-colors min-w-0"
+                      data-cursor="Call"
+                    >
+                      <span className="material-symbols-outlined text-[11px] sm:text-xs shrink-0">call</span>
+                      <span className="truncate">{member.phone}</span>
+                    </a>
+                  )}
                 </div>
               </article>
             </Reveal>

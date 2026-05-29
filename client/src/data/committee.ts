@@ -11,11 +11,12 @@ export type CommitteeMember = {
   name: string;
   role: string;
   image: string;
+  phone?: string;
 };
 
 export const COMMITTEE: CommitteeMember[] = [
-  { name: "Hashan Hirantha", role: "Chairperson", image: hashanImage },
-  { name: "Niluni Sandunika", role: "Secretary", image: niluniImage },
+  { name: "Hashan Hirantha", role: "Chairperson", image: hashanImage, phone: "0705665091" },
+  { name: "Niluni Sandunika", role: "Secretary", image: niluniImage, phone: "0767760746" },
   { name: "Vikum Deshan", role: "Design Team Head", image: vikumImage },
   { name: "Banula Bimsara", role: "Technical Team Head", image: banulaImage },
   { name: "Poorna Sachinthana", role: "Finance Team Head", image: poornaImage },
