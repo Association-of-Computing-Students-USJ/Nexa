@@ -105,6 +105,19 @@ export default function TicketPage() {
 
           <div className="mx-6 sm:mx-8 border-t border-dashed border-[#2a2a2a]" />
 
+          {/* WhatsApp community — shown after successful registration */}
+          <div className="px-6 sm:px-8 py-6 space-y-3">
+            <p className="text-center text-xs font-semibold uppercase tracking-wider text-[#888]">
+              Stay Connected
+            </p>
+            <p className="text-center text-xs text-[#555] leading-relaxed">
+              Join the official delegates group for event updates, reminders, and networking.
+            </p>
+            <WhatsAppCommunityLink />
+          </div>
+
+          <div className="mx-6 sm:mx-8 border-t border-dashed border-[#2a2a2a]" />
+
           {/* Event info grid */}
           <div className="px-6 sm:px-8 py-5 grid grid-cols-2 gap-y-4">
             {[
@@ -145,11 +158,6 @@ export default function TicketPage() {
           A copy of your ticket has been sent to{" "}
           <span className="text-[#19D1E6]">{ticket.email}</span>
         </p>
-
-        <div className="mt-6 space-y-2">
-          <p className="text-center text-xs text-[#555]">Join the delegates community for updates</p>
-          <WhatsAppCommunityLink />
-        </div>
       </div>
     </div>
   );

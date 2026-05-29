@@ -16,7 +16,7 @@ const getSessionIcon = (index: number): string => {
     case 2:
       return "security";
     case 3:
-      return "groups";
+      return "campaign";
     default:
       return "school";
   }

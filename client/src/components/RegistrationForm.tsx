@@ -4,7 +4,6 @@ import { collection, addDoc, getDocs, query, serverTimestamp, updateDoc, where }
 import { db } from "../lib/firebase";
 import { EVENT_DATE } from "../data/eventInfo";
 import { buildWhatsAppCommunityEmailBlock } from "../lib/whatsappCommunity";
-import WhatsAppCommunityLink from "./WhatsAppCommunityLink";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -398,14 +397,6 @@ export default function RegistrationForm() {
             </>
           )}
         </button>
-
-        <div className="space-y-2">
-          <p className="text-center text-xs text-[#555]">Already registered or want event updates?</p>
-          <WhatsAppCommunityLink />
-          <p className="text-center text-xs text-[#444] leading-relaxed">
-            Get reminders, session updates, and connect with fellow delegates in our official WhatsApp community.
-          </p>
-        </div>
 
         <p className="text-center text-xs text-[#444]">
           Your ticket QR code will appear instantly after submission and will also be emailed to you.
