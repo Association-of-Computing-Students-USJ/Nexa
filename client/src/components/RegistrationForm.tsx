@@ -278,16 +278,22 @@ export default function RegistrationForm() {
     <>
       <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-          <Field
-            label="Full Name"
-            name="name"
-            type="text"
-            placeholder="e.g. Kasun Perera"
-            value={fields.name}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={errors.name}
-          />
+          <div className="flex flex-col gap-1.5">
+            <Field
+              label="Full Name"
+              name="name"
+              type="text"
+              placeholder="e.g. Kasun Perera"
+              value={fields.name}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              error={errors.name}
+            />
+            <p className="text-[10px] sm:text-[11px] text-[#888] leading-tight flex items-start gap-1.5 -mt-0.5">
+              <span className="material-symbols-outlined text-[#19D1E6] text-xs shrink-0 mt-0.5">info</span>
+              Enter your proper full name as it appears on official documents. This exact name will be used when printing your certificate.
+            </p>
+          </div>
           <Field
             label="Email Address"
             name="email"
