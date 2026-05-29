@@ -71,9 +71,35 @@ service cloud.firestore {
 
     // NEXA 2026 event registration
     match /registrations/{docId} {
-      allow create: if true;
+      allow create: if request.resource.data.keys().hasAll([
+          'name', 'email', 'phone', 'whatsapp', 'university', 'year',
+          'registeredAt', 'attended', 'attendedAt', 'mealServed', 'mealServedAt', 'emailStatus'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 0
+        && request.resource.data.email.size() <= 120
+        && request.resource.data.phone is string
+        && request.resource.data.whatsapp is string
+        && request.resource.data.university is string
+        && request.resource.data.year is string
+        && request.resource.data.attended == false
+        && request.resource.data.mealServed == false
+        && request.resource.data.emailStatus == "pending";
       allow read, delete: if request.auth != null;
       allow update: if request.auth != null;
+    }
+
+    // One registration per email — doc id is derived from normalized email
+    match /registrationEmails/{emailKey} {
+      allow create: if !exists(/databases/$(database)/documents/registrationEmails/$(emailKey))
+        && request.resource.data.keys().hasAll(['email', 'registrationId', 'registeredAt'])
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 0
+        && request.resource.data.email.size() <= 120
+        && request.resource.data.registrationId is string;
+      allow read, update, delete: if request.auth != null;
     }
 
     // Trigger Email extension

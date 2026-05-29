@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, addDoc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
+import { collection, doc, runTransaction, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { EVENT_DATE } from "../data/eventInfo";
 import { buildWhatsAppCommunityEmailBlock } from "../lib/whatsappCommunity";
@@ -8,6 +8,11 @@ import { buildWhatsAppCommunityEmailBlock } from "../lib/whatsappCommunity";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+
+/** Firestore-safe document id derived from a normalized email address. */
+function emailToDocId(email: string): string {
+  return email.toLowerCase().trim().replace(/@/g, "_at_").replace(/\./g, "_dot_");
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -212,34 +217,40 @@ export default function RegistrationForm() {
     setApiError("");
 
     try {
-      // ── Email uniqueness check ────────────────────────────────────────────
-      try {
-        const emailQuery = query(
-          collection(db, "registrations"),
-          where("email", "==", fields.email.toLowerCase().trim())
-        );
-        const emailSnap = await getDocs(emailQuery);
-        if (!emailSnap.empty) {
-          setErrors({ email: "This email is already registered." });
-          setStatus("error");
-          return;
-        }
-      } catch {
-        // If read is denied by Firestore rules, proceed — the write-side
-        // uniqueness constraint (or rules) will be the final enforcement.
-      }
+      const normalizedEmail = fields.email.toLowerCase().trim();
+      const emailKey = emailToDocId(normalizedEmail);
 
-      // ── Save registration document ─────────────────────────────────────
-      const docRef = await addDoc(collection(db, "registrations"), {
-        ...fields,
-        email: fields.email.toLowerCase().trim(),
-        registeredAt: serverTimestamp(),
-        attended: false,
-        attendedAt: null,
-        mealServed: false,
-        mealServedAt: null,
-        emailStatus: "pending",
+      const registrationId = await runTransaction(db, async (transaction) => {
+        const emailLockRef = doc(db, "registrationEmails", emailKey);
+        const regRef = doc(collection(db, "registrations"));
+
+        const registrationData = {
+          name: fields.name.trim(),
+          email: normalizedEmail,
+          phone: fields.phone.trim(),
+          whatsapp: fields.whatsapp.trim(),
+          university: fields.university.trim(),
+          year: fields.year,
+          registeredAt: serverTimestamp(),
+          attended: false,
+          attendedAt: null,
+          mealServed: false,
+          mealServedAt: null,
+          emailStatus: "pending",
+        };
+
+        // Create-only lock doc — Firestore rules reject updates when email already exists.
+        transaction.set(emailLockRef, {
+          email: normalizedEmail,
+          registrationId: regRef.id,
+          registeredAt: serverTimestamp(),
+        });
+        transaction.set(regRef, registrationData);
+
+        return regRef.id;
       });
+
+      const docRef = { id: registrationId };
 
       // ── Send confirmation email ────────────────────────────────────────
       let emailSent = false;
@@ -265,10 +276,12 @@ export default function RegistrationForm() {
     } catch (err: unknown) {
       console.error("Registration error:", err);
       const code = (err as { code?: string })?.code;
-      const msg =
-        code === "permission-denied"
-          ? "Permission denied — Firestore rules are blocking this write. Please update your Firebase security rules."
-          : `Something went wrong${code ? ` (${code})` : ""}. Please try again or contact nexa.acs.sjp@gmail.com`;
+      if (code === "permission-denied") {
+        setErrors({ email: "This email is already registered." });
+        setStatus("error");
+        return;
+      }
+      const msg = `Something went wrong${code ? ` (${code})` : ""}. Please try again or contact nexa.acs.sjp@gmail.com`;
       setApiError(msg);
       setStatus("error");
     }
