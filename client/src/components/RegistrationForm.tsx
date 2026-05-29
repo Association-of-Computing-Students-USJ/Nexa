@@ -183,7 +183,8 @@ export default function RegistrationForm() {
         return regRef.id;
       });
 
-      const docRef = { id: registrationId };
+        // Use a proper DocumentReference for later updates (updateDoc expects this)
+        const docRef = doc(db, "registrations", registrationId);
 
       // ── Send confirmation email ────────────────────────────────────────
       let emailSent = false;

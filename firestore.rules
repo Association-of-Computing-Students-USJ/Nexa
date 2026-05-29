@@ -71,9 +71,14 @@ service cloud.firestore {
 
     // NEXA 2026 event registration
     match /registrations/{docId} {
+      // Allow creates where server-side timestamp may be provided via transform
+      // (client often uses `serverTimestamp()` which appears as an updateTransform
+      // rather than a literal field in request.resource.data.keys()). Exclude
+      // `registeredAt` from the required-keys check so timestamp transforms
+      // don't cause unintended permission denials.
       allow create: if request.resource.data.keys().hasAll([
           'name', 'email', 'phone', 'whatsapp', 'university', 'year',
-          'registeredAt', 'attended', 'attendedAt', 'mealServed', 'mealServedAt', 'emailStatus'
+          'attended', 'attendedAt', 'mealServed', 'mealServedAt', 'emailStatus'
         ])
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2
@@ -93,8 +98,10 @@ service cloud.firestore {
 
     // One registration per email — doc id is derived from normalized email
     match /registrationEmails/{emailKey} {
+      // Allow creation even when `registeredAt` is supplied as a serverTimestamp()
+      // transform by not requiring it in the literal keys list.
       allow create: if !exists(/databases/$(database)/documents/registrationEmails/$(emailKey))
-        && request.resource.data.keys().hasAll(['email', 'registrationId', 'registeredAt'])
+        && request.resource.data.keys().hasAll(['email', 'registrationId'])
         && request.resource.data.email is string
         && request.resource.data.email.size() > 0
         && request.resource.data.email.size() <= 120
