@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, doc, runTransaction, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { EVENT_DATE } from "../data/eventInfo";
-import { buildWhatsAppCommunityEmailBlock } from "../lib/whatsappCommunity";
+import { buildRegistrationEmailHtml } from "../lib/registrationEmail";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,72 +55,6 @@ function validate(f: FormFields): FieldErrors {
   if (!f.year) e.year = "Please select your academic year.";
 
   return e;
-}
-
-// ─── Email HTML builder ───────────────────────────────────────────────────────
-
-function buildEmailHtml(t: TicketData): string {
-  const shortId = t.id.slice(0, 8).toUpperCase();
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=19D1E6&bgcolor=0e0e0e&data=NEXA-2026-${t.id}&format=png`;
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#0e0e0e;font-family:Arial,sans-serif;">
-  <div style="max-width:560px;margin:40px auto;background:#161616;border-radius:16px;overflow:hidden;border:1px solid #2a2a2a;">
-
-    <div style="height:4px;background:linear-gradient(90deg,#19D1E6,#0ea5e9,#19D1E6)"></div>
-
-    <div style="padding:40px 40px 24px;text-align:center;">
-      <div style="display:inline-block;padding:6px 18px;border-radius:999px;background:rgba(25,209,230,0.12);border:1px solid rgba(25,209,230,0.25);margin-bottom:20px;">
-        <span style="color:#19D1E6;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">✓ Registration Confirmed</span>
-      </div>
-      <h1 style="color:#ffffff;font-size:26px;font-weight:700;margin:0 0 8px 0;">Welcome to NEXA 2026!</h1>
-      <p style="color:#888888;font-size:15px;margin:0;">Hi <strong style="color:#fff">${t.name}</strong>, your spot is secured.</p>
-    </div>
-
-    <div style="margin:0 32px;border-top:1px dashed #2a2a2a;"></div>
-
-    <div style="padding:24px 40px;">
-      <table style="width:100%;border-collapse:collapse;">
-        <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;width:42%;">Ticket ID</td>
-            <td style="padding:7px 0;color:#19D1E6;font-family:monospace;font-size:14px;font-weight:700;">${shortId}</td></tr>
-        <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">University</td>
-            <td style="padding:7px 0;color:#fff;font-size:14px;">${t.university}</td></tr>
-        <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Year</td>
-            <td style="padding:7px 0;color:#fff;font-size:14px;">${t.year}</td></tr>
-        <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Event Date</td>
-            <td style="padding:7px 0;color:#fff;font-size:14px;">${EVENT_DATE}</td></tr>
-        <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Venue</td>
-            <td style="padding:7px 0;color:#fff;font-size:14px;">USJP, Sri Lanka</td></tr>
-        <tr><td style="padding:7px 0;color:#555;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Access</td>
-            <td style="padding:7px 0;color:#fff;font-size:14px;">All-Access Pass</td></tr>
-      </table>
-    </div>
-
-    <div style="margin:0 32px;border-top:1px dashed #2a2a2a;"></div>
-
-    <div style="padding:28px 40px;text-align:center;">
-      <p style="color:#888;font-size:13px;margin:0 0 16px 0;">Scan this QR code at the venue entrance:</p>
-      <img src="${qrUrl}" width="160" height="160" alt="NEXA 2026 Ticket QR Code"
-           style="border-radius:12px;border:1px solid #2a2a2a;display:block;margin:0 auto;" />
-      <p style="color:#555;font-size:11px;font-family:monospace;margin:10px 0 0 0;">${shortId}</p>
-    </div>
-
-    <div style="margin:0 32px 0;border-top:1px dashed #2a2a2a;"></div>
-
-    ${buildWhatsAppCommunityEmailBlock()}
-
-    <div style="margin:0 32px 0;border-top:1px dashed #2a2a2a;"></div>
-
-    <div style="padding:24px 40px 32px;background:#111;text-align:center;">
-      <p style="color:#555;font-size:13px;margin:0 0 4px 0;">Questions? Reach us at</p>
-      <a href="mailto:nexa.acs.sjp@gmail.com" style="color:#19D1E6;font-size:13px;text-decoration:none;">nexa.acs.sjp@gmail.com</a>
-      <p style="color:#333;font-size:11px;margin:20px 0 0 0;">© 2026 NEXA · ACS SJP. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>`;
 }
 
 // ─── Field Component ──────────────────────────────────────────────────────────
@@ -259,7 +192,7 @@ export default function RegistrationForm() {
           to: fields.email,
           message: {
             subject: "🎉 You're Registered for NEXA 2026!",
-            html: buildEmailHtml({ ...fields, id: docRef.id }),
+            html: buildRegistrationEmailHtml({ ...fields, id: docRef.id }),
           },
         });
         emailSent = true;
