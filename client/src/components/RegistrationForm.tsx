@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, doc, runTransaction, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -115,6 +115,44 @@ const EMPTY: FormFields = {
 };
 
 export default function RegistrationForm() {
+  useEffect(() => {
+    // Dynamically load reCAPTCHA script with the Vite site key
+    const key = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+    if (!key) return;
+    if ((window as any).grecaptcha) return;
+    const s = document.createElement("script");
+    s.src = `https://www.google.com/recaptcha/api.js?render=${key}`;
+    s.async = true;
+    document.head.appendChild(s);
+  }, []);
+
+  async function ensureRecaptcha(): Promise<void> {
+    const key = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+    if (!key) return;
+    if ((window as any).grecaptcha) return;
+    await new Promise<void>((resolve, reject) => {
+      const check = () => {
+        if ((window as any).grecaptcha) return resolve();
+        setTimeout(check, 50);
+      };
+      check();
+      // Timeout after 5s
+      setTimeout(() => reject(new Error("reCAPTCHA load timeout")), 5000);
+    });
+  }
+
+  async function getRecaptchaToken(): Promise<string | null> {
+    try {
+      const key = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+      if (!key) return null;
+      await ensureRecaptcha();
+      const grecaptcha = (window as any).grecaptcha;
+      return await grecaptcha.execute(key, { action: "register" });
+    } catch (e) {
+      console.warn("reCAPTCHA failed to execute:", e);
+      return null;
+    }
+  }
   const navigate = useNavigate();
   const [fields, setFields] = useState<FormFields>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -153,40 +191,69 @@ export default function RegistrationForm() {
       const normalizedEmail = fields.email.toLowerCase().trim();
       const emailKey = emailToDocId(normalizedEmail);
 
-      const registrationId = await runTransaction(db, async (transaction) => {
-        const emailLockRef = doc(db, "registrationEmails", emailKey);
-        const regRef = doc(collection(db, "registrations"));
+      let registrationId: string | null = null;
 
-        const registrationData = {
-          name: fields.name.trim(),
-          email: normalizedEmail,
-          phone: fields.phone.trim(),
-          whatsapp: fields.whatsapp.trim(),
-          university: fields.university.trim(),
-          year: fields.year,
-          registeredAt: serverTimestamp(),
-          attended: false,
-          attendedAt: null,
-          mealServed: false,
-          mealServedAt: null,
-          emailStatus: "pending",
-        };
+      // Obtain reCAPTCHA v3 token (optional — will be saved with the registration)
+      const recaptchaToken = await getRecaptchaToken();
 
-        // Create-only lock doc — Firestore rules reject updates when email already exists.
-        transaction.set(emailLockRef, {
-          email: normalizedEmail,
-          registrationId: regRef.id,
-          registeredAt: serverTimestamp(),
+      // Attempt transaction
+      try {
+        registrationId = await runTransaction(db, async (transaction) => {
+          const emailLockRef = doc(db, "registrationEmails", emailKey);
+          const regRef = doc(collection(db, "registrations"));
+
+          const registrationData = {
+            name: fields.name.trim(),
+            email: normalizedEmail,
+            phone: fields.phone.trim(),
+            whatsapp: fields.whatsapp.trim(),
+            university: fields.university.trim(),
+            year: fields.year,
+            registeredAt: serverTimestamp(),
+            attended: false,
+            attendedAt: null,
+            mealServed: false,
+            mealServedAt: null,
+            emailStatus: "pending",
+            recaptchaToken: recaptchaToken,
+          };
+
+            // Create-only lock doc — atomically check existence and abort if present.
+            const emailSnap = await transaction.get(emailLockRef);
+            if (emailSnap.exists()) {
+              // Throw an object with `code` so upstream handler can detect it.
+              throw { code: "permission-denied", message: "Email already registered" };
+            }
+          transaction.set(emailLockRef, {
+            email: normalizedEmail,
+            registrationId: regRef.id,
+            registeredAt: serverTimestamp(),
+            recaptchaToken: recaptchaToken,
+          });
+          transaction.set(regRef, registrationData);
+
+          return regRef.id;
         });
-        transaction.set(regRef, registrationData);
+      } catch (transactionErr: unknown) {
+        const code = (transactionErr as { code?: string })?.code;
+        console.error("Transaction failed:", code, transactionErr);
+        if (code === "permission-denied") {
+          setErrors({ email: "This email is already registered." });
+          setStatus("error");
+          return;
+        }
+        throw transactionErr;
+      }
 
-        return regRef.id;
-      });
+      // Only proceed if transaction succeeded and we have a valid ID
+      if (!registrationId) {
+        throw new Error("Registration created but ID is missing.");
+      }
 
-        // Use a proper DocumentReference for later updates (updateDoc expects this)
-        const docRef = doc(db, "registrations", registrationId);
+      // Use a proper DocumentReference for later updates (updateDoc expects this)
+      const docRef = doc(db, "registrations", registrationId);
 
-      // ── Send confirmation email ────────────────────────────────────────
+      // ── Send confirmation email ONLY if registration succeeded ────────────────────────────────────────
       let emailSent = false;
       try {
         await addDoc(collection(db, "mail"), {
@@ -197,6 +264,7 @@ export default function RegistrationForm() {
           },
         });
         emailSent = true;
+        console.log("Email queued successfully for:", fields.email);
       } catch (emailErr) {
         console.warn("Email queuing failed, flagged for retry:", emailErr);
       }
@@ -208,13 +276,8 @@ export default function RegistrationForm() {
 
       navigate("/ticket", { state: { ticket: { ...fields, id: docRef.id } } });
     } catch (err: unknown) {
-      console.error("Registration error:", err);
+      console.error("Registration workflow error:", err);
       const code = (err as { code?: string })?.code;
-      if (code === "permission-denied") {
-        setErrors({ email: "This email is already registered." });
-        setStatus("error");
-        return;
-      }
       const msg = `Something went wrong${code ? ` (${code})` : ""}. Please try again or contact nexa.acs.sjp@gmail.com`;
       setApiError(msg);
       setStatus("error");
