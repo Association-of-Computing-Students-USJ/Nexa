@@ -5,14 +5,12 @@ import LazyImage from "../../components/LazyImage";
 import MarqueeStrip from "../../components/MarqueeStrip";
 import SectionFallback from "../../components/SectionFallback";
 import AnimatedStat from "../../components/home/AnimatedStat";
-import ImgSlot from "../../components/home/ImgSlot";
 import { useSmoothScroll } from "../../hooks/useSmoothScroll";
 import { useHomeScroll } from "../../hooks/useHomeScroll";
 import { HOME_NAV_LINKS, FOOTER_SUMMIT_LINKS } from "../../data/navigation";
 import { EVENT_DATE } from "../../data/eventInfo";
 import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
 import heroImage from "../../assets/images/logo/hero.jpg";
-import usjpLogo from "../../assets/images/logo/usjp.jpg";
 import acsLogo from "../../assets/images/logo/ACS.png";
 
 const CustomCursor = lazy(() => import("../../components/CustomCursor"));
@@ -276,69 +274,55 @@ export default function HomePage() {
           <div className="absolute inset-0 grid-pattern-light" />
           <div className="absolute top-0 right-0 w-96 h-96 bg-[#19D1E6]/5 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-              <Reveal variant="fade-right" className="hidden lg:block">
-                <div className="relative">
-                  <ImgSlot label="ABOUT_SECTION" className="w-full aspect-square rounded-3xl" />
-                  <div className="absolute bottom-6 left-6 right-6 p-3 rounded-2xl bg-white/90 backdrop-blur-sm border border-gray-100 shadow-lg flex items-center justify-center gap-4">
-                    <img src={usjpLogo} alt="USJP" className="h-8 w-8 object-contain" loading="lazy" decoding="async" />
-                    <div className="w-px h-6 bg-gray-200" />
-                    <img src={acsLogo} alt="ACS" className="h-8 w-8 object-contain" loading="lazy" decoding="async" />
-                    <div className="w-px h-6 bg-gray-200" />
-                    <span className="text-sm font-semibold text-gray-600">ACS × USJP</span>
-                  </div>
-                </div>
+          <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10 md:mb-14">
+              <Reveal variant="fade-up">
+                <span className="text-[#19D1E6] font-semibold tracking-wider uppercase text-sm">About NEXA</span>
               </Reveal>
+              <Reveal variant="fade-up" delayMs={80}>
+                <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mt-4 mb-6 leading-tight tracking-tight text-gray-900">
+                  Where Vision
+                  <span className="block text-[#19D1E6]">Meets Reality</span>
+                </h2>
+              </Reveal>
+              <Reveal variant="fade-up" delayMs={160}>
+                <p className="text-base md:text-lg text-gray-500 leading-relaxed max-w-2xl mx-auto">
+                  For the first time, the Association of Computing Students (ACS) of the University of
+                  Sri Jayewardenepura presents NEXA — a one-day tech talk series bridging the gap between
+                  academic learning and the rapidly evolving technology industry.
+                </p>
+              </Reveal>
+            </div>
 
-              <div>
-                <Reveal variant="fade-left">
-                  <span className="text-[#19D1E6] font-semibold tracking-wider uppercase text-sm">About NEXA</span>
-                </Reveal>
-                <Reveal variant="fade-left" delayMs={80}>
-                  <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mt-4 mb-6 leading-tight tracking-tight text-gray-900">
-                    Where Vision
-                    <span className="block text-[#19D1E6]">Meets Reality</span>
-                  </h2>
-                </Reveal>
-                <Reveal variant="fade-left" delayMs={160}>
-                  <p className="text-base md:text-lg text-gray-500 leading-relaxed mb-8">
-                    For the first time, the Association of Computing Students (ACS) of the University of
-                    Sri Jayewardenepura presents NEXA — a one-day tech talk series bridging the gap between
-                    academic learning and the rapidly evolving technology industry.
-                  </p>
-                </Reveal>
-                <Reveal variant="fade-left" delayMs={240}>
-                  <div className="flex flex-wrap gap-8 md:gap-10 mb-10">
-                    <AnimatedStat value="300+" label="Expected Participants" light />
-                    <AnimatedStat value="4" label="Expert Sessions" light />
-                    <AnimatedStat value="1" label="Action-Packed Day" light />
+            <Reveal variant="fade-up" delayMs={240}>
+              <div className="flex flex-wrap justify-center gap-8 md:gap-10 mb-10 md:mb-14 text-center">
+                <AnimatedStat value="300+" label="Expected Participants" light />
+                <AnimatedStat value="4" label="Expert Sessions" light />
+                <AnimatedStat value="1" label="Action-Packed Day" light />
+              </div>
+            </Reveal>
+
+            <div className="space-y-3 md:space-y-4 max-w-2xl mx-auto">
+              {ABOUT_FEATURES.map((f, i) => (
+                <Reveal key={f.title} variant="fade-up" delayMs={320 + i * 80}>
+                  <div
+                    className="group p-4 md:p-5 rounded-2xl bg-gray-50 border border-gray-200 hover:border-[#19D1E6]/50 hover:bg-white transition-all duration-400 hover:shadow-sm"
+                    data-cursor="Learn"
+                  >
+                    <div className="flex items-start gap-3 md:gap-4">
+                      <div className="p-2.5 rounded-xl bg-[#19D1E6]/10 text-[#19D1E6] group-hover:bg-[#19D1E6] group-hover:text-white transition-colors duration-300 shrink-0">
+                        <span className="material-symbols-outlined text-lg">{f.icon}</span>
+                      </div>
+                      <div className="text-left">
+                        <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-[#19D1E6] transition-colors text-sm md:text-base">
+                          {f.title}
+                        </h3>
+                        <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{f.desc}</p>
+                      </div>
+                    </div>
                   </div>
                 </Reveal>
-
-                <div className="space-y-3 md:space-y-4">
-                  {ABOUT_FEATURES.map((f, i) => (
-                    <Reveal key={f.title} variant="fade-left" delayMs={320 + i * 80}>
-                      <div
-                        className="group p-4 md:p-5 rounded-2xl bg-gray-50 border border-gray-200 hover:border-[#19D1E6]/50 hover:bg-white transition-all duration-400 hover:shadow-sm"
-                        data-cursor="Learn"
-                      >
-                        <div className="flex items-start gap-3 md:gap-4">
-                          <div className="p-2.5 rounded-xl bg-[#19D1E6]/10 text-[#19D1E6] group-hover:bg-[#19D1E6] group-hover:text-white transition-colors duration-300 shrink-0">
-                            <span className="material-symbols-outlined text-lg">{f.icon}</span>
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-[#19D1E6] transition-colors text-sm md:text-base">
-                              {f.title}
-                            </h3>
-                            <p className="text-gray-500 text-xs md:text-sm leading-relaxed">{f.desc}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </Reveal>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
@@ -410,15 +394,13 @@ export default function HomePage() {
               </div>
 
               <Reveal variant="fade-left" className="hidden lg:block">
-                <div className="relative pb-8 pr-8">
-                  <ImgSlot label="ACS_SECTION" className="w-full aspect-square rounded-3xl" />
-                  <div className="absolute bottom-0 right-0 p-4 rounded-2xl bg-white border border-gray-200 shadow-xl flex items-center gap-3">
-                    <img src={acsLogo} alt="ACS" className="h-9 w-9 object-contain" loading="lazy" decoding="async" />
-                    <div>
-                      <div className="font-bold text-gray-900 text-sm">ACS</div>
-                      <div className="text-xs text-gray-500">Faculty of Computing</div>
-                    </div>
-                  </div>
+                <div className="w-full aspect-square rounded-3xl overflow-hidden bg-[#0e0e0e] flex items-center justify-center p-10 md:p-14">
+                  <LazyImage
+                    src={acsLogo}
+                    alt="Association of Computing Students"
+                    className="w-full h-full flex items-center justify-center"
+                    imgClassName="w-full h-full object-contain"
+                  />
                 </div>
               </Reveal>
             </div>
