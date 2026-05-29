@@ -43,7 +43,7 @@ export default function TicketPage() {
     qrInstanceRef.current = qr;
   }, [ticket?.id]);
 
-  if (!ticket) return <Navigate to="/register" replace />;
+  if (!ticket) return <Navigate to="/" replace />;
 
   const shortId = ticket.id.slice(0, 8).toUpperCase();
 

@@ -15,10 +15,10 @@ export const HOME_NAV_LINKS: NavLink[] = [
 
 export const HOME_SECTION_IDS = HOME_NAV_LINKS.map((l) => l.section);
 
-export const FOOTER_SUMMIT_LINKS: { label: string; href: string }[] = [
-  ...HOME_NAV_LINKS.map(({ label, href }) => ({ label, href })),
-  { label: "Register", href: "/register" },
-];
+export const FOOTER_SUMMIT_LINKS: { label: string; href: string }[] = HOME_NAV_LINKS.map(({ label, href }) => ({
+  label,
+  href,
+}));
 
-/** Hash links shown on register/ticket layout header. */
+/** Hash links shown on ticket layout header. */
 export const PUBLIC_HASH_LINKS = HOME_NAV_LINKS.filter((l) => l.href.startsWith("#"));

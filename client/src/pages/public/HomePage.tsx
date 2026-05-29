@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import Reveal from "../../components/Reveal";
 import LazyImage from "../../components/LazyImage";
 import MarqueeStrip from "../../components/MarqueeStrip";
@@ -122,13 +121,6 @@ export default function HomePage() {
                   />
                 </a>
               ))}
-              <Link
-                to="/register"
-                data-cursor="Register"
-                className="px-6 py-2.5 bg-[#19D1E6] text-[#0e0e0e] font-semibold text-sm rounded-full hover:bg-[#19D1E6]/90 transition-all duration-300 hover:scale-105 glow"
-              >
-                Register Now
-              </Link>
             </div>
 
             <button
@@ -157,15 +149,6 @@ export default function HomePage() {
               </a>
             </Reveal>
           ))}
-          <Reveal variant="fade-up" delayMs={HOME_NAV_LINKS.length * 60}>
-            <Link
-              to="/register"
-              onClick={() => setMenuOpen(false)}
-              className="px-8 py-3 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-full text-lg glow"
-            >
-              Register Now
-            </Link>
-          </Reveal>
         </div>
       )}
 
@@ -232,23 +215,14 @@ export default function HomePage() {
             </Reveal>
 
             <Reveal variant="fade-up" delayMs={300} className="w-full flex justify-center">
-              <div className="flex w-full max-w-xs sm:max-w-none flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4">
-                <Link
-                  to="/register"
-                  data-cursor="Register"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-sm sm:text-base hover:bg-[#19D1E6]/90 transition-all duration-300 hover:scale-105 glow shadow-2xl"
-                >
-                  Register Now
-                  <span className="material-symbols-outlined text-[1.1rem]">arrow_forward</span>
-                </Link>
-                <a
-                  href="#sessions"
-                  data-cursor="View"
-                  className="inline-flex w-full sm:w-auto items-center justify-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-white/10 backdrop-blur-sm border border-white/30 text-white font-semibold rounded-full text-sm sm:text-base hover:bg-white/20 hover:border-white/50 transition-all duration-300"
-                >
-                  Explore Sessions
-                </a>
-              </div>
+              <a
+                href="#sessions"
+                data-cursor="View"
+                className="inline-flex w-full max-w-xs sm:max-w-none sm:w-auto items-center justify-center gap-2 px-7 sm:px-8 py-3.5 sm:py-4 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-sm sm:text-base hover:bg-[#19D1E6]/90 transition-all duration-300 hover:scale-105 glow shadow-2xl"
+              >
+                Explore Sessions
+                <span className="material-symbols-outlined text-[1.1rem]">arrow_forward</span>
+              </a>
             </Reveal>
           </div>
 
@@ -423,17 +397,9 @@ export default function HomePage() {
               <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold mb-5 tracking-tight text-white">
                 Ready to <span className="text-[#19D1E6]">Join Us?</span>
               </h2>
-              <p className="text-base md:text-lg text-[#888888] max-w-2xl mx-auto mb-8">
-                Don&apos;t miss the most anticipated tech event of 2026. Secure your spot today.
+              <p className="text-base md:text-lg text-[#888888] max-w-2xl mx-auto">
+                Don&apos;t miss the most anticipated tech event of 2026. Explore sessions and meet the speakers.
               </p>
-              <Link
-                to="/register"
-                data-cursor="Go"
-                className="inline-flex items-center gap-2 px-8 md:px-10 py-4 md:py-5 bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-full text-base md:text-lg hover:bg-[#19D1E6]/90 transition-all hover:scale-105 glow"
-              >
-                Register Now
-                <span className="material-symbols-outlined text-[1.1rem]">arrow_forward</span>
-              </Link>
             </div>
           </Reveal>
 
@@ -456,15 +422,9 @@ export default function HomePage() {
               <ul className="space-y-3">
                 {FOOTER_SUMMIT_LINKS.map(({ label, href }) => (
                   <li key={label}>
-                    {href.startsWith("/") ? (
-                      <Link to={href} className="text-[#888888] text-sm hover:text-[#19D1E6] transition-colors">
-                        {label}
-                      </Link>
-                    ) : (
-                      <a href={href} className="text-[#888888] text-sm hover:text-[#19D1E6] transition-colors">
-                        {label}
-                      </a>
-                    )}
+                    <a href={href} className="text-[#888888] text-sm hover:text-[#19D1E6] transition-colors">
+                      {label}
+                    </a>
                   </li>
                 ))}
               </ul>

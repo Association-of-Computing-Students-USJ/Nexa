@@ -47,13 +47,6 @@ export default function PublicLayout() {
                 {l.label}
               </Link>
             ))}
-            <Link
-              to="/register"
-              className="px-5 py-2.5 bg-[#19D1E6] text-[#0e0e0e] font-semibold text-sm rounded-full hover:bg-[#19D1E6]/90 transition-all hover:scale-105 glow"
-              data-cursor="Register"
-            >
-              Register Now
-            </Link>
           </nav>
 
           <button
@@ -83,13 +76,6 @@ export default function PublicLayout() {
               {l.label}
             </Link>
           ))}
-          <Link
-            to="/register"
-            onClick={() => setMenuOpen(false)}
-            className="px-8 py-3 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-full text-lg glow"
-          >
-            Register Now
-          </Link>
         </div>
       )}
 

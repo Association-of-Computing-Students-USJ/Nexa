@@ -7,7 +7,6 @@ import PageSkeleton from "./components/PageSkeleton";
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
 
 const HomePage = lazy(() => import("./pages/public/HomePage"));
-const RegisterPage = lazy(() => import("./pages/public/RegisterPage"));
 const TicketPage = lazy(() => import("./pages/public/TicketPage"));
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 const AdminScannerPage = lazy(() => import("./pages/admin/AdminScannerPage"));
@@ -22,14 +21,6 @@ export default function App() {
           element={
             <Suspense fallback={<HomePageSkeleton />}>
               <HomePage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <Suspense fallback={<PageSkeleton />}>
-              <RegisterPage />
             </Suspense>
           }
         />
