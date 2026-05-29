@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import QRCodeStyling from "qr-code-styling";
 import nexaLogo from "../../assets/images/logo/NEXA Colour.png";
+import WhatsAppCommunityLink from "../../components/WhatsAppCommunityLink";
 import { EVENT_DATE } from "../../data/eventInfo";
 
 interface TicketData {
@@ -144,6 +145,11 @@ export default function TicketPage() {
           A copy of your ticket has been sent to{" "}
           <span className="text-[#19D1E6]">{ticket.email}</span>
         </p>
+
+        <div className="mt-6 space-y-2">
+          <p className="text-center text-xs text-[#555]">Join the delegates community for updates</p>
+          <WhatsAppCommunityLink />
+        </div>
       </div>
     </div>
   );

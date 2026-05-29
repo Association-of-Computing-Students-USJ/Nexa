@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { EVENT_DATE } from "../data/eventInfo";
+import { buildWhatsAppCommunityEmailBlock } from "../lib/whatsappCommunity";
+import WhatsAppCommunityLink from "./WhatsAppCommunityLink";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -101,6 +103,10 @@ function buildEmailHtml(t: TicketData): string {
            style="border-radius:12px;border:1px solid #2a2a2a;display:block;margin:0 auto;" />
       <p style="color:#555;font-size:11px;font-family:monospace;margin:10px 0 0 0;">${shortId}</p>
     </div>
+
+    <div style="margin:0 32px 0;border-top:1px dashed #2a2a2a;"></div>
+
+    ${buildWhatsAppCommunityEmailBlock()}
 
     <div style="margin:0 32px 0;border-top:1px dashed #2a2a2a;"></div>
 
@@ -392,6 +398,14 @@ export default function RegistrationForm() {
             </>
           )}
         </button>
+
+        <div className="space-y-2">
+          <p className="text-center text-xs text-[#555]">Already registered or want event updates?</p>
+          <WhatsAppCommunityLink />
+          <p className="text-center text-xs text-[#444] leading-relaxed">
+            Get reminders, session updates, and connect with fellow delegates in our official WhatsApp community.
+          </p>
+        </div>
 
         <p className="text-center text-xs text-[#444]">
           Your ticket QR code will appear instantly after submission and will also be emailed to you.
