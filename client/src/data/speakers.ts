@@ -1,4 +1,5 @@
 import prabodhaImage from "../assets/images/speakers/Prabodha.jpeg";
+import kosalaImage from "../assets/images/speakers/Kosala.jpeg";
 
 export interface Speaker {
   id: string;
@@ -24,11 +25,11 @@ export const SPEAKERS: Speaker[] = [
     image: prabodhaImage,
   },
   {
-    id: "speaker-2",
-    name: "To be announced soon",
-    position: "",
-    description: "",
-    announced: false,
+    id: "kosala",
+    name: "Mr. Kosala Jayasekara",
+    position: "CTO @ Fixel Digital & Olee.ai",
+    description: "Skills of Project Management",
+    image: kosalaImage,
   },
   {
     id: "speaker-3",

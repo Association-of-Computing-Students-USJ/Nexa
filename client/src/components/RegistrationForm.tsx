@@ -350,7 +350,7 @@ export default function RegistrationForm() {
             label="Email Address"
             name="email"
             type="email"
-            placeholder="you@university.ac.lk"
+            placeholder="your@email.com"
             value={fields.email}
             onChange={handleChange}
             onBlur={handleBlur}
