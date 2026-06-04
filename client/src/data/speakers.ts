@@ -1,5 +1,6 @@
 import prabodhaImage from "../assets/images/speakers/Prabodha.jpeg";
 import kosalaImage from "../assets/images/speakers/Kosala.jpeg";
+import tharakaImage from "../assets/images/speakers/Tharaka.jpeg";
 
 export interface Speaker {
   id: string;
@@ -32,11 +33,12 @@ export const SPEAKERS: Speaker[] = [
     image: kosalaImage,
   },
   {
-    id: "speaker-3",
-    name: "To be announced soon",
-    position: "",
-    description: "",
-    announced: false,
+    id: "tharaka",
+    name: "Mr. Tharaka Mahabage",
+    position: "Cybersecurity architect/educator",
+    description:
+      "The AI Identity Crisis: From Social Media Footprints to Deep Fake Deception",
+    image: tharakaImage,
   },
   {
     id: "speaker-4",
