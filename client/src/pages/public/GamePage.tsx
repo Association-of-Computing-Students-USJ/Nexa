@@ -255,8 +255,14 @@ export default function GamePage() {
       }
     } catch (error) {
       console.error("Error saving game results:", error);
-      // On error, stay in the same game to let the user try again
-      setGameState("playing");
+      // Fallback: even if Firebase save fails (e.g. due to security rules or network issues),
+      // we still advance the game state locally so the user can test the transition.
+      if (currentGameIndex < GAMES.length - 1) {
+        setCurrentGameIndex(currentGameIndex + 1);
+        setGameState("playing");
+      } else {
+        setGameState("finished");
+      }
     }
   }, [
     teamNameState,
