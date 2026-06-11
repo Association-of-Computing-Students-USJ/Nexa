@@ -115,6 +115,11 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // Nexa Games - Teams progress tracking
+    match /teams/{teamId} {
+      allow read, write: if true;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
