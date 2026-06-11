@@ -304,6 +304,9 @@ export default function GamePage() {
   if (!teamNameState) {
     return (
       <div className="min-h-screen bg-[#0e1115] text-[#19D1E6] flex flex-col items-center justify-center font-mono">
+        <Suspense fallback={null}>
+          <CustomCursor />
+        </Suspense>
         <span className="material-symbols-outlined animate-spin text-4xl mb-3">sync</span>
         Redirecting...
       </div>
@@ -313,6 +316,9 @@ export default function GamePage() {
   if (isTeamValid === null) {
     return (
       <div className="min-h-screen bg-[#0e1115] text-[#19D1E6] flex flex-col items-center justify-center font-mono">
+        <Suspense fallback={null}>
+          <CustomCursor />
+        </Suspense>
         <span className="material-symbols-outlined animate-spin text-4xl mb-3">sync</span>
         Validating Team...
       </div>
@@ -322,6 +328,9 @@ export default function GamePage() {
   if (isTeamValid === false) {
     return (
       <div className="min-h-screen bg-[#0c0e12] text-gray-200 p-6 flex flex-col items-center justify-center font-mono">
+        <Suspense fallback={null}>
+          <CustomCursor />
+        </Suspense>
         <div className="max-w-md w-full bg-[#13171f] border border-red-500/30 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
           <div className="inline-flex p-3 bg-red-950/30 border border-red-500/30 text-red-500 rounded-full mb-4">
             <span className="material-symbols-outlined text-4xl">error</span>

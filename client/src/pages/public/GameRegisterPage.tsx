@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, lazy, Suspense } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+
+const CustomCursor = lazy(() => import("../../components/CustomCursor"));
 
 export default function GameRegisterPage() {
   const navigate = useNavigate();
@@ -81,6 +83,9 @@ export default function GameRegisterPage() {
 
   return (
     <div className="min-h-screen bg-[#0c0e12] text-gray-200 p-4 flex flex-col items-center justify-center relative overflow-hidden">
+      <Suspense fallback={null}>
+        <CustomCursor />
+      </Suspense>
       {/* Background Orbs */}
       <div className="absolute top-0 left-0 w-96 h-96 bg-[#19D1E6]/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#19D1E6]/3 rounded-full blur-3xl pointer-events-none" />
