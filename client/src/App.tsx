@@ -12,6 +12,7 @@ const TicketPage = lazy(() => import("./pages/public/TicketPage"));
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 const AdminScannerPage = lazy(() => import("./pages/admin/AdminScannerPage"));
 const GamePage = lazy(() => import("./pages/public/GamePage"));
+const GameRegisterPage = lazy(() => import("./pages/public/GameRegisterPage"));
 
 export default function App() {
   return (
@@ -48,6 +49,14 @@ export default function App() {
         element={
           <Suspense fallback={<PageSkeleton />}>
             <GamePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/game/register"
+        element={
+          <Suspense fallback={<PageSkeleton />}>
+            <GameRegisterPage />
           </Suspense>
         }
       />

@@ -40,7 +40,7 @@ export function useSmoothScroll() {
       };
     }
 
-    const timer = window.setTimeout(start, 400);
+    const timer = setTimeout(start, 400);
     return () => {
       cancelled = true;
       clearTimeout(timer);

@@ -43,6 +43,7 @@ export default function GamePage() {
 
   const [gameResults, setGameResults] = useState<GameResult[]>([]);
   const [teamNameState, setTeamNameState] = useState<string | null>(null);
+  const [isTeamValid, setIsTeamValid] = useState<boolean | null>(null); // null = loading, true = valid, false = invalid
 
   // Add game win states tracking
   const [gameWinStates, setGameWinStates] = useState<Record<string, boolean>>({
@@ -71,6 +72,7 @@ export default function GamePage() {
       documentRef,
       (documentSnapshot) => {
         if (documentSnapshot.exists()) {
+          setIsTeamValid(true);
           const data = documentSnapshot.data() as TeamDataType & {
             gameStartTime?: any;
           };
@@ -130,11 +132,13 @@ export default function GamePage() {
             setCurrentGameIndex(0);
           }
         } else {
-          console.log("Team document does not exist. Initializing dynamically on first save.");
+          setIsTeamValid(false);
+          console.log("Team document does not exist. Access blocked.");
         }
       },
       (err) => {
         console.error("Firestore listening error:", err);
+        setIsTeamValid(false);
       }
     );
 
@@ -302,6 +306,45 @@ export default function GamePage() {
       <div className="min-h-screen bg-[#0e1115] text-[#19D1E6] flex flex-col items-center justify-center font-mono">
         <span className="material-symbols-outlined animate-spin text-4xl mb-3">sync</span>
         Redirecting...
+      </div>
+    );
+  }
+
+  if (isTeamValid === null) {
+    return (
+      <div className="min-h-screen bg-[#0e1115] text-[#19D1E6] flex flex-col items-center justify-center font-mono">
+        <span className="material-symbols-outlined animate-spin text-4xl mb-3">sync</span>
+        Validating Team...
+      </div>
+    );
+  }
+
+  if (isTeamValid === false) {
+    return (
+      <div className="min-h-screen bg-[#0c0e12] text-gray-200 p-6 flex flex-col items-center justify-center font-mono">
+        <div className="max-w-md w-full bg-[#13171f] border border-red-500/30 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
+          <div className="inline-flex p-3 bg-red-950/30 border border-red-500/30 text-red-500 rounded-full mb-4">
+            <span className="material-symbols-outlined text-4xl">error</span>
+          </div>
+          <h2 className="text-xl font-bold text-white mb-2">Team Not Registered</h2>
+          <p className="text-gray-400 text-sm mb-6">
+            The team <span className="text-red-400 font-semibold">"{teamNameState}"</span> could not be found. Please register your team to enter the Nexa Tech Arena.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => navigate("/game/register")}
+              className="w-full py-3 bg-[#19D1E6] hover:bg-[#19D1E6]/90 text-[#0e0e0e] font-bold rounded-xl text-sm transition duration-200"
+            >
+              Register Team
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-sm transition duration-200"
+            >
+              Go to Homepage
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
