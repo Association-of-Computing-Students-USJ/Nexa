@@ -213,7 +213,7 @@ export default function SlidingPuzzle({ isWon, setIsWon }: SlidingPuzzleProps) {
         <button
           onClick={triggerAutoSolve}
           disabled={isWon}
-          className="text-gray-500 hover:text-[#19D1E6] transition hover:underline active:scale-95"
+          className="hidden text-gray-500 hover:text-[#19D1E6] transition hover:underline active:scale-95"
         >
           [Dev: Near Solved State]
         </button>

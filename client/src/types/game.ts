@@ -5,9 +5,16 @@ export interface GameResult {
   formattedTime: string;
 }
 
-export interface TeamDataType {
+export interface PlayerDataType {
   totalTimeTaken?: number;
   gameResults?: GameResult[];
+  playerStartTime?: number;  // when this player clicked "Start Playing"
+}
+
+export interface ArenaState {
+  arenaStatus: "idle" | "open" | "closed";
+  arenaOpenedAt: number | null;
+  arenaWindowMs: number; // 1800000 = 30 min
 }
 
 export interface GameOptions {
