@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, doc, runTransaction, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -115,72 +115,6 @@ const EMPTY: FormFields = {
 };
 
 export default function RegistrationForm() {
-  const [recaptchaLoaded, setRecaptchaLoaded] = useState(true); // Assume true by default
-  const [recaptchaError, setRecaptchaError] = useState("");
-
-  useEffect(() => {
-    // Dynamically load reCAPTCHA script with the Vite site key
-    const key = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-    if (!key) return;
-    if ((window as any).grecaptcha) {
-      setRecaptchaLoaded(true);
-      setRecaptchaError("");
-      return;
-    }
-
-    const s = document.createElement("script");
-    s.src = `https://www.google.com/recaptcha/api.js?render=${key}`;
-    s.async = true;
-    s.onload = () => {
-      if ((window as any).grecaptcha) {
-        setRecaptchaLoaded(true);
-        setRecaptchaError("");
-      }
-    };
-    s.onerror = () => {
-      setRecaptchaLoaded(false);
-      setRecaptchaError("reCAPTCHA failed to load. Please disable your ad-blocker or Brave Shields and try again.");
-    };
-    document.head.appendChild(s);
-
-    // Check if script was blocked after a timeout
-    const timeoutId = setTimeout(() => {
-      if (!(window as any).grecaptcha) {
-        setRecaptchaLoaded(false);
-        setRecaptchaError("reCAPTCHA is blocked. Please disable your ad-blocker or Brave Shields to complete registration.");
-      }
-    }, 3000);
-
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  async function ensureRecaptcha(): Promise<void> {
-    const key = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-    if (!key) return;
-    if ((window as any).grecaptcha) return;
-    await new Promise<void>((resolve, reject) => {
-      const check = () => {
-        if ((window as any).grecaptcha) return resolve();
-        setTimeout(check, 50);
-      };
-      check();
-      // Timeout after 5s
-      setTimeout(() => reject(new Error("reCAPTCHA load timeout")), 5000);
-    });
-  }
-
-  async function getRecaptchaToken(): Promise<string | null> {
-    try {
-      const key = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-      if (!key) return null;
-      await ensureRecaptcha();
-      const grecaptcha = (window as any).grecaptcha;
-      return await grecaptcha.execute(key, { action: "register" });
-    } catch (e) {
-      console.warn("reCAPTCHA failed to execute:", e);
-      return null;
-    }
-  }
   const navigate = useNavigate();
   const [fields, setFields] = useState<FormFields>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -212,12 +146,6 @@ export default function RegistrationForm() {
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
-    // Check if reCAPTCHA is available before proceeding
-    if (!recaptchaLoaded || !(window as any).grecaptcha) {
-      setApiError("reCAPTCHA is blocked. Please disable your ad-blocker or Brave Shields to complete registration.");
-      return;
-    }
-
     setStatus("loading");
     setApiError("");
 
@@ -226,9 +154,6 @@ export default function RegistrationForm() {
       const emailKey = emailToDocId(normalizedEmail);
 
       let registrationId: string | null = null;
-
-      // Obtain reCAPTCHA v3 token
-      const recaptchaToken = await getRecaptchaToken();
 
       // Attempt transaction
       try {
@@ -249,7 +174,6 @@ export default function RegistrationForm() {
             mealServed: false,
             mealServedAt: null,
             emailStatus: "pending",
-            recaptchaToken: recaptchaToken,
           };
 
             // Create-only lock doc — atomically check existence and abort if present.
@@ -262,7 +186,6 @@ export default function RegistrationForm() {
             email: normalizedEmail,
             registrationId: regRef.id,
             registeredAt: serverTimestamp(),
-            recaptchaToken: recaptchaToken,
           });
           transaction.set(regRef, registrationData);
 
@@ -321,14 +244,6 @@ export default function RegistrationForm() {
   return (
     <>
       <form onSubmit={handleSubmit} noValidate className="space-y-4 sm:space-y-5">
-        {/* reCAPTCHA error */}
-        {recaptchaError && (
-          <div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-            <span className="material-symbols-outlined text-yellow-400 text-base mt-0.5">warning</span>
-            <p className="text-yellow-400 text-sm">{recaptchaError}</p>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
           <div className="flex flex-col gap-1.5">
             <Field
