@@ -8,7 +8,8 @@ import { RegistrationsProvider, useRegistrations } from "../context/Registration
 const NAV_ITEMS = [
   { icon: "group",            label: "Participants", path: "/admin/dashboard" },
   { icon: "qr_code_scanner",  label: "QR Scanner",   path: "/admin/scanner"   },
-  { icon: "rate_review",      label: "Feedback",       path: "/admin/feedback"  },
+  { icon: "rate_review",      label: "Feedback",     path: "/admin/feedback"  },
+  { icon: "sports_esports",   label: "Arena",        path: "/admin/arena"     },
 ];
 
 function AdminLiveBadge() {

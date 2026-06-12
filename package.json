@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "build": "npm --prefix client install && npm --prefix client run build",
+    "dev": "npm --prefix client run dev",
     "start": "node server.js",
     "deploy:rules": "firebase deploy --only firestore:rules --project acsusj-web",
     "deploy:hosting": "npm run build && firebase deploy --only hosting --project acsusj-web",
