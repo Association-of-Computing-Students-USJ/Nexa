@@ -255,7 +255,7 @@ export default function GamePage() {
           };
 
           // Sync start time from Firestore if set
-          if (data.gameStartTime !== undefined) {
+          if (data.gameStartTime) {
             const timestamp = data.gameStartTime;
             let timeVal: number | undefined = undefined;
             if (timestamp && typeof timestamp.toDate === "function") {
@@ -270,6 +270,10 @@ export default function GamePage() {
               setGameStartTime(timeVal);
               setGameOpenTime(timeVal);
             }
+          } else {
+            setGameStartTime(undefined);
+            setGameOpenTime(undefined);
+            localStorage.removeItem(`nexa_start_${teamNameState}`);
           }
 
           if (data.totalTimeTaken !== undefined) {
@@ -336,6 +340,9 @@ export default function GamePage() {
       ) {
         if (gameState !== "playing") {
           setGameState("playing");
+          if (!localStorage.getItem(`nexa_start_${teamNameState}`)) {
+            localStorage.setItem(`nexa_start_${teamNameState}`, Date.now().toString());
+          }
         }
       }
     }, 1000);
@@ -370,8 +377,18 @@ export default function GamePage() {
 
     // Calculate time taken
     const endTime = Date.now();
-    const lastTimeInMs = gameOpenTime
-      ? gameOpenTime + gameResults.reduce((acc, curr) => acc + curr.timeInMs, 0)
+    let baseTime = gameOpenTime;
+    
+    // Override with local start time if available to prevent clock skew
+    if (teamNameState) {
+      const localStartStr = localStorage.getItem(`nexa_start_${teamNameState}`);
+      if (localStartStr) {
+        baseTime = parseInt(localStartStr, 10);
+      }
+    }
+
+    const lastTimeInMs = baseTime
+      ? baseTime + gameResults.reduce((acc, curr) => acc + curr.timeInMs, 0)
       : endTime;
     const timeTaken = endTime - lastTimeInMs;
     const minutes = Math.floor(timeTaken / 60000);
