@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../lib/firebase";
+import { submitFeedback } from "../lib/submitFeedback";
 
 interface FormFields {
   name: string;
@@ -131,11 +130,10 @@ export default function FeedbackForm({ onSuccess }: FeedbackFormProps) {
     setApiError("");
 
     try {
-      await addDoc(collection(db, "feedback"), {
+      await submitFeedback({
         name: fields.name.trim(),
         university: fields.university.trim(),
         feedback: fields.feedback.trim(),
-        submittedAt: serverTimestamp(),
       });
       setFields(EMPTY);
       setTouched({});
