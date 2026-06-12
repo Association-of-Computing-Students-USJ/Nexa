@@ -11,6 +11,7 @@ const RegisterPage = lazy(() => import("./pages/public/RegisterPage"));
 const TicketPage = lazy(() => import("./pages/public/TicketPage"));
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 const AdminScannerPage = lazy(() => import("./pages/admin/AdminScannerPage"));
+const AdminArenaPage = lazy(() => import("./pages/admin/AdminArenaPage"));
 const GamePage = lazy(() => import("./pages/public/GamePage"));
 const GameRegisterPage = lazy(() => import("./pages/public/GameRegisterPage"));
 
@@ -64,6 +65,14 @@ export default function App() {
       {/* ── Admin routes ──────────────────────────────────── */}
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route
+        path="/admin/arena"
+        element={
+          <Suspense fallback={<PageSkeleton />}>
+            <AdminArenaPage />
+          </Suspense>
+        }
+      />
       <Route element={<AdminLayout />}>
         <Route
           path="/admin/dashboard"

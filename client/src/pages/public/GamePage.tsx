@@ -23,6 +23,183 @@ const GAMES: Game[] = [
   { id: "15puzzle", name: "15 Puzzle", component: SlidingPuzzle },
 ];
 
+// ─── Tips for the waiting/buffer screen ──────────────────────────────────────
+
+const GAME_TIPS = [
+  {
+    icon: "grid_on",
+    title: "Sudoku Rules",
+    text: "Each row, column, and 3×3 box must contain the numbers 1–9 without repeating.",
+  },
+  {
+    icon: "keyboard",
+    title: "Keyboard Controls",
+    text: "Use arrow keys or WASD to navigate the 15-Puzzle. Click tiles adjacent to the empty space.",
+  },
+  {
+    icon: "vpn_key",
+    title: "Leader Device",
+    text: "Only the leader device can submit scores and advance to the next game. Coordinate with your team!",
+  },
+  {
+    icon: "speed",
+    title: "Speed Matters",
+    text: "Your total time across both games determines your ranking. Be fast but accurate!",
+  },
+  {
+    icon: "widgets",
+    title: "15-Puzzle Strategy",
+    text: "Arrange tiles 1–15 in numerical order. Start by solving the top row and left column first.",
+  },
+  {
+    icon: "lightbulb",
+    title: "Sudoku Tip",
+    text: "Look for cells where only one number is possible. Scan rows, columns, and boxes systematically.",
+  },
+];
+
+function WaitingScreen({
+  teamName,
+  gameStartTime,
+  currentTime,
+  formatTimeUntilStart,
+}: {
+  teamName: string | null;
+  gameStartTime: number | undefined;
+  currentTime: number;
+  formatTimeUntilStart: (ms: number) => string;
+}) {
+  const [tipIndex, setTipIndex] = useState(0);
+  const [tipVisible, setTipVisible] = useState(true);
+
+  // Rotate tips every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTipVisible(false);
+      setTimeout(() => {
+        setTipIndex((prev) => (prev + 1) % GAME_TIPS.length);
+        setTipVisible(true);
+      }, 400);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentTip = GAME_TIPS[tipIndex];
+
+  return (
+    <div className="flex flex-col items-center justify-center py-10 sm:py-16 text-center">
+      {/* Team name badge */}
+      {teamName && (
+        <div className="mb-6 px-5 py-2 bg-[#19D1E6]/8 border border-[#19D1E6]/20 rounded-full">
+          <span className="text-xs font-mono text-[#19D1E6] uppercase tracking-wider">
+            Team: <span className="font-bold">{teamName}</span>
+          </span>
+        </div>
+      )}
+
+      {/* Animated waiting icon */}
+      <div className="relative mb-6">
+        <div className="w-20 h-20 rounded-full bg-[#19D1E6]/5 border-2 border-[#19D1E6]/20 flex items-center justify-center">
+          <span className="material-symbols-outlined text-[#19D1E6] text-4xl animate-pulse">
+            sports_esports
+          </span>
+        </div>
+        <div className="absolute inset-0 w-20 h-20 rounded-full border-2 border-[#19D1E6]/10 animate-ping" />
+      </div>
+
+      <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
+        Get Ready for the Arena!
+      </h2>
+      <p className="text-gray-400 text-sm max-w-md mb-6">
+        The competition will begin when the organizer starts the game.
+        Review the tips below while you wait.
+      </p>
+
+      {/* Countdown display */}
+      {gameStartTime && (
+        <div className="mb-8 px-6 py-3 bg-gray-900/80 border border-[#19D1E6]/20 rounded-2xl text-[#19D1E6] font-mono text-sm shadow-inner backdrop-blur-sm">
+          {gameStartTime > currentTime ? (
+            <>
+              ⏱ Starting in:{" "}
+              <span className="font-bold text-base">
+                {formatTimeUntilStart(gameStartTime - currentTime)}
+              </span>
+            </>
+          ) : (
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-[#19D1E6] animate-ping" />
+              Arena starting momentarily...
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Game order */}
+      <div className="w-full max-w-sm mb-8">
+        <p className="text-[10px] uppercase tracking-widest text-gray-500 font-mono mb-3">
+          Game Order
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/60 border border-gray-700/50 rounded-xl">
+            <span className="material-symbols-outlined text-[#19D1E6] text-base">grid_on</span>
+            <span className="text-sm text-white font-medium">Sudoku</span>
+          </div>
+          <span className="material-symbols-outlined text-gray-600 text-base">arrow_forward</span>
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-gray-800/60 border border-gray-700/50 rounded-xl">
+            <span className="material-symbols-outlined text-[#19D1E6] text-base">widgets</span>
+            <span className="text-sm text-white font-medium">15 Puzzle</span>
+          </div>
+          <span className="material-symbols-outlined text-gray-600 text-base">arrow_forward</span>
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-900/30 border border-emerald-500/20 rounded-xl">
+            <span className="material-symbols-outlined text-emerald-400 text-base">emoji_events</span>
+            <span className="text-sm text-emerald-400 font-medium">Results</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Rotating tip card */}
+      <div className="w-full max-w-md">
+        <div
+          className="bg-gray-900/50 border border-gray-800/60 rounded-2xl p-5 transition-all duration-400"
+          style={{
+            opacity: tipVisible ? 1 : 0,
+            transform: tipVisible ? "translateY(0)" : "translateY(8px)",
+          }}
+        >
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 w-10 h-10 rounded-xl bg-[#19D1E6]/10 border border-[#19D1E6]/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[#19D1E6] text-lg">
+                {currentTip.icon}
+              </span>
+            </div>
+            <div className="text-left">
+              <p className="text-xs uppercase tracking-wider text-[#19D1E6] font-semibold mb-1">
+                💡 {currentTip.title}
+              </p>
+              <p className="text-sm text-gray-300 leading-relaxed">
+                {currentTip.text}
+              </p>
+            </div>
+          </div>
+        </div>
+        {/* Tip pagination dots */}
+        <div className="flex items-center justify-center gap-1.5 mt-3">
+          {GAME_TIPS.map((_, i) => (
+            <div
+              key={i}
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                i === tipIndex
+                  ? "bg-[#19D1E6] w-4"
+                  : "bg-gray-700"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GamePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -147,14 +324,6 @@ export default function GamePage() {
 
   // Check game state on initialization and when time/gameStartTime updates
   useEffect(() => {
-    // If no start time is specified, make it start immediately
-    if (gameState === "waiting" && gameStartTime === undefined) {
-      const now = Date.now();
-      setGameStartTime(now);
-      setGameOpenTime(now);
-      setGameState("playing");
-    }
-
     const timer = setInterval(() => {
       const now = Date.now();
       setCurrentTime(now);
@@ -449,33 +618,14 @@ export default function GamePage() {
 
         {/* Main Content Area */}
         <div className="bg-[#13171f] border border-gray-800/80 rounded-3xl p-4 md:p-8 shadow-2xl relative overflow-hidden">
-          {/* Waiting State - Only for first game */}
+          {/* Waiting State - Buffer screen with tips */}
           {gameState === "waiting" && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <span className="material-symbols-outlined text-gray-600 text-5xl mb-4 animate-pulse">
-                hourglass_empty
-              </span>
-              <h2 className="text-xl font-bold text-white mb-2">
-                Waiting for the Arena to Open
-              </h2>
-              <p className="text-gray-400 text-sm max-w-sm">
-                The competition will begin automatically at the scheduled start time. Get ready!
-              </p>
-              {gameStartTime && (
-                <div className="mt-6 px-5 py-3 bg-gray-900 border border-gray-800 rounded-2xl text-[#19D1E6] font-mono text-sm shadow-inner">
-                  {gameStartTime > currentTime ? (
-                    <>
-                      Time remaining:{" "}
-                      <span className="font-bold">
-                        {formatTimeUntilStart(gameStartTime - currentTime)}
-                      </span>
-                    </>
-                  ) : (
-                    <>Arena starting momentarily...</>
-                  )}
-                </div>
-              )}
-            </div>
+            <WaitingScreen
+              teamName={teamNameState}
+              gameStartTime={gameStartTime}
+              currentTime={currentTime}
+              formatTimeUntilStart={formatTimeUntilStart}
+            />
           )}
 
           {/* Countdown - Only for first game */}
