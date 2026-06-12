@@ -56,7 +56,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ACSUSJ_WEB }}
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy to Firebase Hosting
         run: npx -y firebase-tools@latest deploy --only hosting:${FIREBASE_HOSTING_SITE},firestore:rules --project ${FIREBASE_PROJECT_ID} --non-interactive

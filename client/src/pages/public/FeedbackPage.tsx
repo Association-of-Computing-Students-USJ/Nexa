@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import Reveal from "../../components/Reveal";
 import FeedbackForm from "../../components/FeedbackForm";
+
+const CustomCursor = lazy(() => import("../../components/CustomCursor"));
 
 export default function FeedbackPage() {
   const [submitted, setSubmitted] = useState(false);
 
   return (
     <div className="w-full min-w-0">
+      <Suspense fallback={null}>
+        <CustomCursor />
+      </Suspense>
       <section className="relative bg-[#0e0e0e] overflow-hidden py-14 sm:py-20 md:py-28 min-h-dvh">
         <div className="absolute inset-0 grid-pattern" />
         <div className="absolute top-1/4 right-0 w-[400px] h-[400px] bg-[#19D1E6]/6 rounded-full blur-3xl pointer-events-none" />

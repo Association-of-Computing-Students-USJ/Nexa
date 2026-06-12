@@ -111,8 +111,8 @@ service cloud.firestore {
 
     // NEXA 2026 event feedback
     match /feedback/{docId} {
-      allow create: if request.resource.data.keys().hasAll(['name', 'university', 'feedback'])
-        && request.resource.data.name is string
+      // Validate fields only — submittedAt may be a serverTimestamp() transform.
+      allow create: if request.resource.data.name is string
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 100
         && request.resource.data.university is string
