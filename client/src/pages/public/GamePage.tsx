@@ -328,29 +328,14 @@ export default function GamePage() {
       const now = Date.now();
       setCurrentTime(now);
 
-      // Only for the first game, determine the proper state based on time
+      // If gameStartTime exists, the admin has started the game. Start immediately.
       if (
         currentGameIndex === 0 &&
         gameStartTime &&
-        gameResults.length === 0 // Make sure we haven't already played games
+        gameResults.length === 0
       ) {
-        const timeUntilStart = gameStartTime - now;
-
-        // If the start time is in the past, we should be playing
-        if (timeUntilStart <= 0) {
-          if (gameState !== "playing") {
-            setGameState("playing");
-          }
-        }
-        // If we're within the countdown period (5 minutes before start)
-        else if (timeUntilStart <= COUNTDOWN_PERIOD_MS) {
-          setGameState("countdown");
-          const remainingSeconds = Math.floor(timeUntilStart / 1000);
-          setCountdownTime(remainingSeconds);
-        }
-        // Otherwise we're in waiting state
-        else if (gameState !== "waiting") {
-          setGameState("waiting");
+        if (gameState !== "playing") {
+          setGameState("playing");
         }
       }
     }, 1000);
