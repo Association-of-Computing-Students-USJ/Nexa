@@ -324,7 +324,7 @@ export default function AdminArenaPage() {
       </div>
 
       {/* ── Hero Timer Section ─────────────────────────────────── */}
-      <div className="relative z-10 flex flex-col items-center justify-center shrink-0 py-4">
+      <div className={`relative z-10 flex flex-col items-center justify-center py-4 ${arenaState !== "running" ? "flex-1" : "shrink-0"}`}>
         {/* IDLE state */}
         {arenaState === "idle" && (
           <div className="flex flex-col items-center gap-6 animate-fadeIn">
@@ -408,7 +408,8 @@ export default function AdminArenaPage() {
       </div>
 
       {/* ── Leaderboard Section ────────────────────────────────── */}
-      <div className="relative z-10 flex-1 flex flex-col min-h-0 px-6 pb-6">
+      {arenaState === "running" && (
+      <div className="relative z-10 flex-1 flex flex-col min-h-0 px-6 pb-6 animate-fadeIn">
         {/* Leaderboard header */}
         <div className="flex items-center justify-between mb-3 shrink-0">
           <div className="flex items-center gap-2">
@@ -614,6 +615,7 @@ export default function AdminArenaPage() {
           )}
         </div>
       </div>
+      )}
 
       {/* ── Inline keyframe styles ─────────────────────────────── */}
       <style>{`
