@@ -11,6 +11,8 @@ const RegisterPage = lazy(() => import("./pages/public/RegisterPage"));
 const TicketPage = lazy(() => import("./pages/public/TicketPage"));
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 const AdminScannerPage = lazy(() => import("./pages/admin/AdminScannerPage"));
+const GamePage = lazy(() => import("./pages/public/GamePage"));
+const GameRegisterPage = lazy(() => import("./pages/public/GameRegisterPage"));
 
 export default function App() {
   return (
@@ -42,6 +44,22 @@ export default function App() {
           }
         />
       </Route>
+      <Route
+        path="/game"
+        element={
+          <Suspense fallback={<PageSkeleton />}>
+            <GamePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/game/register"
+        element={
+          <Suspense fallback={<PageSkeleton />}>
+            <GameRegisterPage />
+          </Suspense>
+        }
+      />
 
       {/* ── Admin routes ──────────────────────────────────── */}
       <Route path="/admin" element={<Navigate to="/admin/login" replace />} />

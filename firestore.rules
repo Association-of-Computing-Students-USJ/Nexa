@@ -115,6 +115,15 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // Nexa Games - Teams progress tracking
+    match /teams/{teamId} {
+      allow read, update: if true;
+      allow create: if !exists(/databases/$(database)/documents/teams/$(teamId))
+        && request.resource.data.keys().hasAll(['registeredAt', 'gameResults', 'totalTimeTaken'])
+        && request.resource.data.totalTimeTaken == 0;
+      allow delete: if request.auth != null;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
