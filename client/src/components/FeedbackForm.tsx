@@ -26,8 +26,6 @@ function validate(f: FormFields): FieldErrors {
 
   if (!f.feedback.trim())
     e.feedback = "Feedback is required.";
-  else if (f.feedback.trim().length < 10)
-    e.feedback = "Feedback must be at least 10 characters.";
 
   return e;
 }
