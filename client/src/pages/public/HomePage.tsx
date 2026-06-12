@@ -378,7 +378,7 @@ export default function HomePage() {
                       <p className="text-xs md:text-sm text-gray-500 mt-1">Expected Attendees</p>
                     </div>
                     <div className="p-4 md:p-5 rounded-2xl bg-gray-50 border border-gray-200">
-                      <span className="text-xl md:text-2xl font-bold text-[#19D1E6]">4</span>
+                      <span className="text-xl md:text-2xl font-bold text-[#19D1E6]">3</span>
                       <p className="text-xs md:text-sm text-gray-500 mt-1">Expert Speakers</p>
                     </div>
                     <div className="p-4 md:p-5 rounded-2xl bg-gray-50 border border-gray-200">

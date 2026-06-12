@@ -40,11 +40,4 @@ export const SPEAKERS: Speaker[] = [
       "The AI Identity Crisis: From Social Media Footprints to Deep Fake Deception",
     image: tharakaImage,
   },
-  {
-    id: "speaker-4",
-    name: "To be announced soon",
-    position: "",
-    description: "",
-    announced: false,
-  },
 ];

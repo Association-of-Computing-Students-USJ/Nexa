@@ -81,10 +81,10 @@ export default function EventSpeakers({ sectionClassName = "", includeAnchorId =
               <span className="text-[#19D1E6]"> Leaders</span>
             </>
           }
-          description="Four expert voices sharing insights on innovation, strategy, and the future of tech in Sri Lanka."
+          description="Three expert voices sharing insights on innovation, strategy, and the future of tech in Sri Lanka."
         />
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 md:gap-6">
           {SPEAKERS.map((speaker, index) => (
             <Reveal key={speaker.id} variant="fade-up" delayMs={index * 70}>
               <SpeakerCard speaker={speaker} index={index} />
