@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, doc, runTransaction, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
+import { collection, doc, writeBatch, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { buildRegistrationEmailHtml } from "../lib/registrationEmail";
 
@@ -230,47 +230,44 @@ export default function RegistrationForm() {
       // Obtain reCAPTCHA v3 token
       const recaptchaToken = await getRecaptchaToken();
 
-      // Attempt transaction
+      // Attempt batched write
       try {
-        registrationId = await runTransaction(db, async (transaction) => {
-          const emailLockRef = doc(db, "registrationEmails", emailKey);
-          const regRef = doc(collection(db, "registrations"));
+        const emailLockRef = doc(db, "registrationEmails", emailKey);
+        const regRef = doc(collection(db, "registrations"));
 
-          const registrationData = {
-            name: fields.name.trim(),
-            email: normalizedEmail,
-            phone: fields.phone.trim(),
-            whatsapp: fields.whatsapp.trim(),
-            university: fields.university.trim(),
-            year: fields.year,
-            registeredAt: serverTimestamp(),
-            attended: false,
-            attendedAt: null,
-            mealServed: false,
-            mealServedAt: null,
-            emailStatus: "pending",
-            recaptchaToken: recaptchaToken,
-          };
+        const registrationData = {
+          name: fields.name.trim(),
+          email: normalizedEmail,
+          phone: fields.phone.trim(),
+          whatsapp: fields.whatsapp.trim(),
+          university: fields.university.trim(),
+          year: fields.year,
+          registeredAt: serverTimestamp(),
+          attended: false,
+          attendedAt: null,
+          mealServed: false,
+          mealServedAt: null,
+          emailStatus: "pending",
+          recaptchaToken: recaptchaToken,
+        };
 
-            // Create-only lock doc — atomically check existence and abort if present.
-            const emailSnap = await transaction.get(emailLockRef);
-            if (emailSnap.exists()) {
-              // Throw an object with `code` so upstream handler can detect it.
-              throw { code: "permission-denied", message: "Email already registered" };
-            }
-          transaction.set(emailLockRef, {
-            email: normalizedEmail,
-            registrationId: regRef.id,
-            registeredAt: serverTimestamp(),
-            recaptchaToken: recaptchaToken,
-          });
-          transaction.set(regRef, registrationData);
+        const batch = writeBatch(db);
 
-          return regRef.id;
+        // This will fail with permission-denied if the document already exists,
+        // because the 'create' rule requires !exists() and 'update' is false.
+        batch.set(emailLockRef, {
+          email: normalizedEmail,
+          registrationId: regRef.id,
+          registeredAt: serverTimestamp(),
+          recaptchaToken: recaptchaToken,
         });
+        batch.set(regRef, registrationData);
+
+        await batch.commit();
+        registrationId = regRef.id;
       } catch (transactionErr: unknown) {
         const code = (transactionErr as { code?: string })?.code;
-        console.error("Transaction failed:", code, transactionErr);
+        console.error("Batch write failed:", code, transactionErr);
         if (code === "permission-denied") {
           setErrors({ email: "This email is already registered." });
           setStatus("error");
