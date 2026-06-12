@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, doc, writeBatch, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -205,23 +205,30 @@ export default function RegistrationForm() {
     setErrors((prev) => ({ ...prev, [name]: errs[name as keyof FormFields] }));
   }
 
+  const isSubmitting = useRef(false);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setTouched(Object.fromEntries(Object.keys(fields).map((k) => [k, true])));
-    const errs = validate(fields);
-    setErrors(errs);
-    if (Object.keys(errs).length) return;
 
-    // Check if reCAPTCHA is available before proceeding
-    if (!recaptchaLoaded || !(window as any).grecaptcha) {
-      setApiError("reCAPTCHA is blocked. Please disable your ad-blocker or Brave Shields to complete registration.");
-      return;
-    }
-
-    setStatus("loading");
-    setApiError("");
+    // Prevent double submission from quick double taps on Android
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
 
     try {
+      setTouched(Object.fromEntries(Object.keys(fields).map((k) => [k, true])));
+      const errs = validate(fields);
+      setErrors(errs);
+      if (Object.keys(errs).length) return;
+
+      // Check if reCAPTCHA is available before proceeding
+      if (!recaptchaLoaded || !(window as any).grecaptcha) {
+        setApiError("reCAPTCHA is blocked. Please disable your ad-blocker or Brave Shields to complete registration.");
+        return;
+      }
+
+      setStatus("loading");
+      setApiError("");
+
       const normalizedEmail = fields.email.toLowerCase().trim();
       const emailKey = emailToDocId(normalizedEmail);
 
@@ -312,6 +319,8 @@ export default function RegistrationForm() {
       const msg = `Something went wrong${code ? ` (${code})` : ""}. Please try again or contact nexa.acs.sjp@gmail.com`;
       setApiError(msg);
       setStatus("error");
+    } finally {
+      isSubmitting.current = false;
     }
   }
 
