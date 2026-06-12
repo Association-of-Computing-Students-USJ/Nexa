@@ -5,10 +5,10 @@ import CustomCursor from "../components/CustomCursor";
 import { ensureFirebaseAuth, firebaseAuthErrorMessage, signOutAdmin } from "../lib/firebaseAuth";
 import { ADMIN_SESSION_KEY } from "../pages/admin/AdminLoginPage";
 import { RegistrationsProvider, useRegistrations } from "../context/RegistrationsContext";
-
 const NAV_ITEMS = [
   { icon: "group",            label: "Participants", path: "/admin/dashboard" },
-  { icon: "qr_code_scanner",  label: "QR Scanner",  path: "/admin/scanner"   },
+  { icon: "qr_code_scanner",  label: "QR Scanner",   path: "/admin/scanner"   },
+  { icon: "rate_review",      label: "Feedback",       path: "/admin/feedback"  },
 ];
 
 function AdminLiveBadge() {
@@ -37,6 +37,8 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   const isAuth = sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
 
@@ -46,12 +48,52 @@ export default function AdminLayout() {
   // Restore Firebase Auth session for Firestore reads/writes (sole backend)
   useEffect(() => {
     if (!isAuth) return;
-    ensureFirebaseAuth().catch((err) =>
-      console.error("[Admin] Firebase auth failed:", err)
-    );
+    setAuthReady(false);
+    setAuthError("");
+    ensureFirebaseAuth()
+      .then(() => setAuthReady(true))
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : "Firebase sign-in failed.";
+        setAuthError(message);
+        console.error("[Admin] Firebase auth failed:", err);
+      });
   }, [isAuth]);
 
   if (!isAuth) return <Navigate to="/admin/login" replace />;
+
+  if (authError) {
+    return (
+      <div className="min-h-dvh bg-[#0a0a0a] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#161616] border border-red-500/20 rounded-2xl p-6 text-center">
+          <span className="material-symbols-outlined text-red-400 text-3xl mb-3">error</span>
+          <h1 className="text-white font-bold text-lg mb-2">Admin sign-in required</h1>
+          <p className="text-[#888] text-sm mb-6 leading-relaxed">{authError}</p>
+          <button
+            type="button"
+            onClick={() => {
+              sessionStorage.removeItem(ADMIN_SESSION_KEY);
+              void signOutAdmin().finally(() => navigate("/admin/login", { replace: true }));
+            }}
+            className="px-6 py-3 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-xl text-sm"
+          >
+            Back to login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!authReady) {
+    return (
+      <div className="min-h-dvh bg-[#0a0a0a] flex items-center justify-center gap-3">
+        <svg className="animate-spin h-5 w-5 text-[#19D1E6]" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
+        </svg>
+        <span className="text-[#888] text-sm">Connecting to Firebase…</span>
+      </div>
+    );
+  }
 
   function handleLogout() {
     sessionStorage.removeItem(ADMIN_SESSION_KEY);

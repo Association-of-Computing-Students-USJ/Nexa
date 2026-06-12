@@ -18,7 +18,7 @@ export default function PublicLayout() {
     };
   }, [menuOpen]);
 
-  if (location.pathname === "/") return <Outlet />;
+  if (location.pathname === "/" || location.pathname === "/feedback") return <Outlet />;
 
   return (
     <div className="min-h-dvh bg-[#0e0e0e] text-white">

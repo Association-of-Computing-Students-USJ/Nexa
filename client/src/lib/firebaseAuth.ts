@@ -1,8 +1,8 @@
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { auth } from "./firebase";
 
-const ADMIN_FIREBASE_EMAIL = import.meta.env.VITE_ADMIN_FIREBASE_EMAIL as string | undefined;
-const ADMIN_FIREBASE_PASS = import.meta.env.VITE_ADMIN_FIREBASE_PASS as string | undefined;
+const ADMIN_FIREBASE_EMAIL = (import.meta.env.VITE_ADMIN_FIREBASE_EMAIL as string | undefined)?.trim();
+const ADMIN_FIREBASE_PASS = (import.meta.env.VITE_ADMIN_FIREBASE_PASS as string | undefined)?.trim();
 
 export function firebaseAuthErrorMessage(code: string): string {
   switch (code) {

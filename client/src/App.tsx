@@ -9,8 +9,10 @@ import AdminLoginPage from "./pages/admin/AdminLoginPage";
 const HomePage = lazy(() => import("./pages/public/HomePage"));
 const RegisterPage = lazy(() => import("./pages/public/RegisterPage"));
 const TicketPage = lazy(() => import("./pages/public/TicketPage"));
+const FeedbackPage = lazy(() => import("./pages/public/FeedbackPage"));
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 const AdminScannerPage = lazy(() => import("./pages/admin/AdminScannerPage"));
+const AdminFeedbackPage = lazy(() => import("./pages/admin/AdminFeedbackPage"));
 
 export default function App() {
   return (
@@ -41,6 +43,14 @@ export default function App() {
             </Suspense>
           }
         />
+        <Route
+          path="/feedback"
+          element={
+            <Suspense fallback={<PageSkeleton />}>
+              <FeedbackPage />
+            </Suspense>
+          }
+        />
       </Route>
 
       {/* ── Admin routes ──────────────────────────────────── */}
@@ -60,6 +70,14 @@ export default function App() {
           element={
             <Suspense fallback={<PageSkeleton />}>
               <AdminScannerPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/admin/feedback"
+          element={
+            <Suspense fallback={<PageSkeleton />}>
+              <AdminFeedbackPage />
             </Suspense>
           }
         />
