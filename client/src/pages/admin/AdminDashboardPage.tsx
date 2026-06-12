@@ -17,8 +17,8 @@ import { useAdminAccess } from "../../hooks/useAdminAccess";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
-interface AdminTeamType {
-  id: string; // doc ID which is the team name
+interface AdminPlayerType {
+  id: string; // doc ID which is the player name
   registeredAt?: Timestamp | null;
   gameResults?: Array<{
     gameId: string;
@@ -27,7 +27,7 @@ interface AdminTeamType {
     formattedTime: string;
   }>;
   totalTimeTaken?: number;
-  gameStartTime?: any;
+  playerStartTime?: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -322,61 +322,61 @@ export default function AdminDashboardPage() {
   const { accesses } = useAdminAccess();
   const hasGameAccess = accesses.includes("game");
 
-  const [activeTab, setActiveTab] = useState<"participants" | "teams">("participants");
+  const [activeTab, setActiveTab] = useState<"participants" | "players">("participants");
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState("All");
   const [deleteTarget, setDeleteTarget] = useState<Participant | null>(null);
   const [detailTarget, setDetailTarget] = useState<Participant | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Teams state
-  const [teams, setTeams] = useState<AdminTeamType[]>([]);
-  const [teamsLoading, setTeamsLoading] = useState(true);
-  const [teamsError, setTeamsError] = useState("");
-  const [teamsSearch, setTeamsSearch] = useState("");
-  const [copiedTeam, setCopiedTeam] = useState<{ id: string; type: "leader" | "member" } | null>(null);
+  // Players state
+  const [players, setPlayers] = useState<AdminPlayerType[]>([]);
+  const [playersLoading, setPlayersLoading] = useState(true);
+  const [playersError, setPlayersError] = useState("");
+  const [playersSearch, setPlayersSearch] = useState("");
+  const [copiedPlayer, setCopiedPlayer] = useState<string | null>(null);
 
-  // Subscribe to teams collection in real-time
+  // Subscribe to players collection in real-time
   useEffect(() => {
-    const teamsCol = collection(db, "teams");
+    const playersCol = collection(db, "players");
     const unsubscribe = onSnapshot(
-      teamsCol,
+      playersCol,
       (snapshot) => {
-        const teamsData: AdminTeamType[] = [];
+        const playersData: AdminPlayerType[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
-          teamsData.push({
+          playersData.push({
             id: doc.id,
             registeredAt: data.registeredAt || null,
             gameResults: data.gameResults || [],
             totalTimeTaken: typeof data.totalTimeTaken === "number" ? data.totalTimeTaken : 0,
-            gameStartTime: data.gameStartTime || null,
+            playerStartTime: data.playerStartTime || null,
           });
         });
-        // Sort teams by registration time
-        teamsData.sort((a, b) => {
+        // Sort players by registration time
+        playersData.sort((a, b) => {
           const aTime = safeToDate(a.registeredAt)?.getTime() || 0;
           const bTime = safeToDate(b.registeredAt)?.getTime() || 0;
           return bTime - aTime;
         });
-        setTeams(teamsData);
-        setTeamsLoading(false);
+        setPlayers(playersData);
+        setPlayersLoading(false);
       },
       (err) => {
-        console.error("Error listening to teams:", err);
-        setTeamsError("Failed to fetch teams: " + err.message);
-        setTeamsLoading(false);
+        console.error("Error listening to players:", err);
+        setPlayersError("Failed to fetch players: " + err.message);
+        setPlayersLoading(false);
       }
     );
     return unsubscribe;
   }, []);
 
-  // Filtered teams
-  const filteredTeams = useMemo(() => {
-    const q = teamsSearch.toLowerCase().trim();
-    if (!q) return teams;
-    return teams.filter(t => t.id.toLowerCase().includes(q));
-  }, [teams, teamsSearch]);
+  // Filtered players
+  const filteredPlayers = useMemo(() => {
+    const q = playersSearch.toLowerCase().trim();
+    if (!q) return players;
+    return players.filter(t => t.id.toLowerCase().includes(q));
+  }, [players, playersSearch]);
 
   // Derived stats for participants
   const todayCount = useMemo(() => participants.filter(p => isToday(p.registeredAt)).length, [participants]);
@@ -385,11 +385,11 @@ export default function AdminDashboardPage() {
   const mealServedCount = useMemo(() => participants.filter(p => p.mealServed).length, [participants]);
   const years = useMemo(() => ["All", ...Array.from(new Set(participants.map(p => p.year))).sort()], [participants]);
 
-  // Derived stats for teams
-  const totalTeamsCount = teams.length;
-  const completedTeamsCount = useMemo(() => teams.filter(t => (t.gameResults || []).length >= 2).length, [teams]);
-  const inProgressTeamsCount = useMemo(() => teams.filter(t => (t.gameResults || []).length > 0 && (t.gameResults || []).length < 2).length, [teams]);
-  const waitingTeamsCount = useMemo(() => teams.filter(t => (t.gameResults || []).length === 0).length, [teams]);
+  // Derived stats for players
+  const totalPlayersCount = players.length;
+  const completedPlayersCount = useMemo(() => players.filter(t => (t.gameResults || []).length >= 2).length, [players]);
+  const inProgressPlayersCount = useMemo(() => players.filter(t => (t.gameResults || []).length > 0 && (t.gameResults || []).length < 2).length, [players]);
+  const waitingPlayersCount = useMemo(() => players.filter(t => (t.gameResults || []).length === 0).length, [players]);
 
   // Filtered participants rows
   const filtered = useMemo(() => {
@@ -411,58 +411,58 @@ export default function AdminDashboardPage() {
   }
 
 
-  async function resetAllTeams() {
-    if (!window.confirm("Are you sure you want to reset ALL teams' game progress? This will erase all play times!")) return;
+  async function resetAllPlayers() {
+    if (!window.confirm("Are you sure you want to reset ALL players' game progress? This will erase all play times!")) return;
     try {
       const batch = writeBatch(db);
-      teams.forEach((t) => {
-        const docRef = doc(db, "teams", t.id);
+      players.forEach((p) => {
+        const docRef = doc(db, "players", p.id);
         batch.update(docRef, {
           gameResults: [],
           totalTimeTaken: 0,
+          playerStartTime: null,
         });
       });
       await batch.commit();
-      alert("Reset all teams' progress successfully!");
+      alert("Reset all players' progress successfully!");
     } catch (err: any) {
-      alert("Failed to reset all teams: " + err.message);
+      alert("Failed to reset all players: " + err.message);
     }
   }
 
-  async function handleResetTeam(teamId: string) {
-    if (!window.confirm(`Are you sure you want to reset the progress for team "${teamId}"?`)) return;
+  async function handleResetPlayer(playerId: string) {
+    if (!window.confirm(`Are you sure you want to reset the progress for player "${playerId}"?`)) return;
     try {
-      const docRef = doc(db, "teams", teamId);
+      const docRef = doc(db, "players", playerId);
       await updateDoc(docRef, {
         gameResults: [],
         totalTimeTaken: 0,
+        playerStartTime: null,
       });
     } catch (err: any) {
       alert("Error resetting progress: " + err.message);
     }
   }
 
-  async function handleDeleteTeam(teamId: string) {
-    if (!window.confirm(`Are you sure you want to permanently delete team "${teamId}"? This action cannot be undone.`)) return;
+  async function handleDeletePlayer(playerId: string) {
+    if (!window.confirm(`Are you sure you want to permanently delete player "${playerId}"? This action cannot be undone.`)) return;
     try {
-      const docRef = doc(db, "teams", teamId);
+      const docRef = doc(db, "players", playerId);
       await deleteDoc(docRef);
     } catch (err: any) {
-      alert("Error deleting team: " + err.message);
+      alert("Error deleting player: " + err.message);
     }
   }
 
-  const handleCopyLink = (text: string, teamId: string, type: "leader" | "member") => {
+  const handleCopyLink = (text: string, playerId: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedTeam({ id: teamId, type });
-    setTimeout(() => setCopiedTeam(null), 2000);
+    setCopiedPlayer(playerId);
+    setTimeout(() => setCopiedPlayer(null), 2000);
   };
 
-  const getTeamLinks = (teamName: string) => {
+  const getPlayerLink = (playerName: string) => {
     const origin = window.location.origin;
-    const leaderUrl = `${origin}/game?team=${encodeURIComponent(teamName)}&editable=true`;
-    const memberUrl = `${origin}/game?team=${encodeURIComponent(teamName)}`;
-    return { leaderUrl, memberUrl };
+    return `${origin}/game?player=${encodeURIComponent(playerName)}`;
   };
 
   return (
@@ -504,14 +504,14 @@ export default function AdminDashboardPage() {
             Participants
           </button>
           <button
-            onClick={() => setActiveTab("teams")}
+            onClick={() => setActiveTab("players")}
             className={`pb-3 text-sm font-semibold tracking-wide border-b-2 transition-all relative top-[2px] ${
-              activeTab === "teams"
+              activeTab === "players"
                 ? "border-[#19D1E6] text-[#19D1E6]"
                 : "border-transparent text-[#555] hover:text-white"
             }`}
           >
-            Game Teams
+            Game Players
           </button>
         </div>
 
@@ -737,11 +737,11 @@ export default function AdminDashboardPage() {
           </>
         ) : (
           <>
-            {/* Teams View */}
+            {/* Players View */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold text-white">Game Teams</h1>
-                <p className="text-[#888] text-sm mt-0.5">Arena team progress & time management</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-white">Game Players</h1>
+                <p className="text-[#888] text-sm mt-0.5">Arena player progress & time management</p>
               </div>
               <div className="flex items-center gap-2.5">
                 {hasGameAccess && (
@@ -754,7 +754,7 @@ export default function AdminDashboardPage() {
                       Open Arena
                     </button>
                     <button
-                      onClick={resetAllTeams}
+                      onClick={resetAllPlayers}
                       className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 font-semibold rounded-xl text-sm transition duration-200 shrink-0"
                     >
                       <span className="material-symbols-outlined text-base">restart_alt</span>
@@ -767,10 +767,10 @@ export default function AdminDashboardPage() {
 
             {/* Stat cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard icon="groups" label="Total Teams" value={totalTeamsCount} accent />
-              <StatCard icon="hourglass_empty" label="Waiting" value={waitingTeamsCount} />
-              <StatCard icon="play_arrow" label="In Progress" value={inProgressTeamsCount} />
-              <StatCard icon="emoji_events" label="Completed" value={completedTeamsCount} />
+              <StatCard icon="groups" label="Total Players" value={totalPlayersCount} accent />
+              <StatCard icon="hourglass_empty" label="Waiting" value={waitingPlayersCount} />
+              <StatCard icon="play_arrow" label="In Progress" value={inProgressPlayersCount} />
+              <StatCard icon="emoji_events" label="Completed" value={completedPlayersCount} />
             </div>
 
             {/* Filters */}
@@ -781,9 +781,9 @@ export default function AdminDashboardPage() {
                 </span>
                 <input
                   type="text"
-                  placeholder="Search teams by name…"
-                  value={teamsSearch}
-                  onChange={e => setTeamsSearch(e.target.value)}
+                  placeholder="Search players by name…"
+                  value={playersSearch}
+                  onChange={e => setPlayersSearch(e.target.value)}
                   className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-xl pl-10 pr-4 py-3 text-sm placeholder-[#444] focus:outline-none focus:ring-2 focus:ring-[#19D1E6]/30 focus:border-[#19D1E6]/60 transition-colors"
                 />
               </div>
@@ -793,12 +793,12 @@ export default function AdminDashboardPage() {
             <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl overflow-hidden">
               <div className="px-4 sm:px-5 py-3 border-b border-[#2a2a2a] flex items-center justify-between">
                 <span className="text-[#888] text-xs">
-                  {filteredTeams.length} {filteredTeams.length === 1 ? "team" : "teams"}
-                  {teamsSearch && ` · filtered from ${teams.length}`}
+                  {filteredPlayers.length} {filteredPlayers.length === 1 ? "player" : "players"}
+                  {playersSearch && ` · filtered from ${players.length}`}
                 </span>
-                {teamsSearch && (
+                {playersSearch && (
                   <button
-                    onClick={() => setTeamsSearch("")}
+                    onClick={() => setPlayersSearch("")}
                     className="text-[#19D1E6] text-xs hover:underline"
                   >
                     Clear filter
@@ -806,18 +806,18 @@ export default function AdminDashboardPage() {
                 )}
               </div>
 
-              {teamsLoading ? (
+              {playersLoading ? (
                 <div className="flex items-center justify-center py-20 gap-3">
                   <svg className="animate-spin h-5 w-5 text-[#19D1E6]" viewBox="0 0 24 24" fill="none">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
                   </svg>
-                  <span className="text-[#888] text-sm">Loading teams…</span>
+                  <span className="text-[#888] text-sm">Loading players…</span>
                 </div>
-              ) : filteredTeams.length === 0 ? (
+              ) : filteredPlayers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <span className="material-symbols-outlined text-4xl text-[#2a2a2a]">groups</span>
-                  <p className="text-[#555] text-sm">No teams found</p>
+                  <p className="text-[#555] text-sm">No players found</p>
                 </div>
               ) : (
                 <>
@@ -826,7 +826,7 @@ export default function AdminDashboardPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-[#2a2a2a]">
-                          {["Team Name", "Registered", "Sudoku Time", "15 Puzzle Time", "Total Time", "Status", "Links", ""].map(h => (
+                          {["Player Name", "Registered", "Sudoku Time", "15 Puzzle Time", "Total Time", "Status", "Game Link", ""].map(h => (
                             <th key={h} className="text-left text-[#555] text-xs font-semibold uppercase tracking-wider px-5 py-3">
                               {h}
                             </th>
@@ -834,19 +834,19 @@ export default function AdminDashboardPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#1a1a1a]">
-                        {filteredTeams.map(t => {
-                          const sudokuRes = t.gameResults?.find(r => r.gameId === "sudoku");
-                          const puzzleRes = t.gameResults?.find(r => r.gameId === "15puzzle");
-                          const stageCount = t.gameResults?.length || 0;
-                          const { leaderUrl, memberUrl } = getTeamLinks(t.id);
+                        {filteredPlayers.map(p => {
+                          const sudokuRes = p.gameResults?.find(r => r.gameId === "sudoku");
+                          const puzzleRes = p.gameResults?.find(r => r.gameId === "15puzzle");
+                          const stageCount = p.gameResults?.length || 0;
+                          const gameUrl = getPlayerLink(p.id);
 
                           return (
-                            <tr key={t.id} className="hover:bg-[#1a1a1a] transition-colors group">
+                            <tr key={p.id} className="hover:bg-[#1a1a1a] transition-colors group">
                               <td className="px-5 py-3.5">
-                                <p className="font-semibold text-white truncate max-w-[180px]">{t.id}</p>
+                                <p className="font-semibold text-white truncate max-w-[180px]">{p.id}</p>
                               </td>
                               <td className="px-5 py-3.5 text-[#888] text-xs whitespace-nowrap">
-                                {fmtDate(t.registeredAt)}
+                                {fmtDate(p.registeredAt)}
                               </td>
                               <td className="px-5 py-3.5 font-mono text-sm text-[#888]">
                                 {sudokuRes ? (
@@ -863,7 +863,7 @@ export default function AdminDashboardPage() {
                                 )}
                               </td>
                               <td className="px-5 py-3.5 font-mono text-sm text-white font-bold">
-                                {formatMs(t.totalTimeTaken)}
+                                {formatMs(p.totalTimeTaken)}
                               </td>
                               <td className="px-5 py-3.5">
                                 {stageCount >= 2 ? (
@@ -881,38 +881,29 @@ export default function AdminDashboardPage() {
                                 )}
                               </td>
                               <td className="px-5 py-3.5">
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleCopyLink(leaderUrl, t.id, "leader")}
-                                    className="px-2 py-1 bg-gray-900 border border-[#2a2a2a] hover:border-[#19D1E6]/40 text-[#888] hover:text-white rounded-lg text-[10px] font-mono flex items-center gap-1 transition-colors"
-                                  >
-                                    <span className="material-symbols-outlined text-[10px]">vpn_key</span>
-                                    {copiedTeam?.id === t.id && copiedTeam?.type === "leader" ? "Copied" : "Leader"}
-                                  </button>
-                                  <button
-                                    onClick={() => handleCopyLink(memberUrl, t.id, "member")}
-                                    className="px-2 py-1 bg-gray-900 border border-[#2a2a2a] hover:border-[#19D1E6]/40 text-[#888] hover:text-white rounded-lg text-[10px] font-mono flex items-center gap-1 transition-colors"
-                                  >
-                                    <span className="material-symbols-outlined text-[10px]">visibility</span>
-                                    {copiedTeam?.id === t.id && copiedTeam?.type === "member" ? "Copied" : "Member"}
-                                  </button>
-                                </div>
+                                <button
+                                  onClick={() => handleCopyLink(gameUrl, p.id)}
+                                  className="px-3 py-1.5 bg-gray-900 border border-[#2a2a2a] hover:border-[#19D1E6]/40 text-[#888] hover:text-white rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors"
+                                >
+                                  <span className="material-symbols-outlined text-xs">link</span>
+                                  {copiedPlayer === p.id ? "Copied!" : "Copy Link"}
+                                </button>
                               </td>
                               <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   {hasGameAccess && (
                                     <>
                                       <button
-                                        onClick={() => handleResetTeam(t.id)}
+                                        onClick={() => handleResetPlayer(p.id)}
                                         className="p-1.5 rounded-lg text-[#555] hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
                                         title="Reset Progress"
                                       >
                                         <span className="material-symbols-outlined text-base">restart_alt</span>
                                       </button>
                                       <button
-                                        onClick={() => handleDeleteTeam(t.id)}
+                                        onClick={() => handleDeletePlayer(p.id)}
                                         className="p-1.5 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                        title="Delete Team"
+                                        title="Delete Player"
                                       >
                                         <span className="material-symbols-outlined text-base">delete</span>
                                       </button>
@@ -929,18 +920,18 @@ export default function AdminDashboardPage() {
 
                   {/* Mobile card list */}
                   <div className="lg:hidden divide-y divide-[#1a1a1a]">
-                    {filteredTeams.map(t => {
-                      const sudokuRes = t.gameResults?.find(r => r.gameId === "sudoku");
-                      const puzzleRes = t.gameResults?.find(r => r.gameId === "15puzzle");
-                      const stageCount = t.gameResults?.length || 0;
-                      const { leaderUrl, memberUrl } = getTeamLinks(t.id);
+                    {filteredPlayers.map(p => {
+                      const sudokuRes = p.gameResults?.find(r => r.gameId === "sudoku");
+                      const puzzleRes = p.gameResults?.find(r => r.gameId === "15puzzle");
+                      const stageCount = p.gameResults?.length || 0;
+                      const gameUrl = getPlayerLink(p.id);
 
                       return (
-                        <div key={t.id} className="p-4 flex flex-col gap-3 hover:bg-[#1a1a1a] transition-colors">
+                        <div key={p.id} className="p-4 flex flex-col gap-3 hover:bg-[#1a1a1a] transition-colors">
                           <div className="flex justify-between items-start gap-2">
                             <div>
-                              <p className="font-semibold text-white text-base">{t.id}</p>
-                              <p className="text-[#555] text-[10px] font-mono mt-0.5">Reg: {fmtDate(t.registeredAt)}</p>
+                              <p className="font-semibold text-white text-base">{p.id}</p>
+                              <p className="text-[#555] text-[10px] font-mono mt-0.5">Reg: {fmtDate(p.registeredAt)}</p>
                             </div>
                             {stageCount >= 2 ? (
                               <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full">Completed</span>
@@ -962,39 +953,32 @@ export default function AdminDashboardPage() {
                             </div>
                             <div>
                               <p className="text-[#555] text-[9px] uppercase font-bold">Total</p>
-                              <p className="text-[#19D1E6] mt-0.5 font-bold">{formatMs(t.totalTimeTaken)}</p>
+                              <p className="text-[#19D1E6] mt-0.5 font-bold">{formatMs(p.totalTimeTaken)}</p>
                             </div>
                           </div>
 
                           <div className="flex items-center justify-between gap-2 mt-1">
                             <div className="flex items-center gap-1.5">
                               <button
-                                onClick={() => handleCopyLink(leaderUrl, t.id, "leader")}
-                                className="px-2.5 py-1.5 bg-gray-900 border border-[#2a2a2a] hover:border-[#19D1E6]/40 text-[#888] hover:text-white rounded-lg text-[10px] font-mono flex items-center gap-1 transition-colors"
+                                onClick={() => handleCopyLink(gameUrl, p.id)}
+                                className="px-3 py-1.5 bg-gray-900 border border-[#2a2a2a] hover:border-[#19D1E6]/40 text-[#888] hover:text-white rounded-lg text-xs font-mono flex items-center gap-1.5 transition-colors"
                               >
-                                <span className="material-symbols-outlined text-[11px]">vpn_key</span>
-                                {copiedTeam?.id === t.id && copiedTeam?.type === "leader" ? "Copied" : "Leader"}
-                              </button>
-                              <button
-                                onClick={() => handleCopyLink(memberUrl, t.id, "member")}
-                                className="px-2.5 py-1.5 bg-gray-900 border border-[#2a2a2a] hover:border-[#19D1E6]/40 text-[#888] hover:text-white rounded-lg text-[10px] font-mono flex items-center gap-1 transition-colors"
-                              >
-                                <span className="material-symbols-outlined text-[11px]">visibility</span>
-                                {copiedTeam?.id === t.id && copiedTeam?.type === "member" ? "Copied" : "Member"}
+                                <span className="material-symbols-outlined text-xs">link</span>
+                                {copiedPlayer === p.id ? "Copied!" : "Copy Link"}
                               </button>
                             </div>
 
                             {hasGameAccess && (
                               <div className="flex items-center gap-1.5">
                                 <button
-                                  onClick={() => handleResetTeam(t.id)}
+                                  onClick={() => handleResetPlayer(p.id)}
                                   className="p-2 bg-gray-900 border border-[#2a2a2a] text-[#888] hover:text-amber-400 rounded-lg hover:bg-amber-500/10 transition-colors"
                                   title="Reset"
                                 >
                                   <span className="material-symbols-outlined text-base leading-none">restart_alt</span>
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteTeam(t.id)}
+                                  onClick={() => handleDeletePlayer(p.id)}
                                   className="p-2 bg-gray-900 border border-[#2a2a2a] text-[#888] hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
                                   title="Delete"
                                 >

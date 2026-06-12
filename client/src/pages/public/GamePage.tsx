@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { setGameResultsApi } from "../../lib/gameApi";
-import { GameResult, TeamDataType } from "../../types/game";
+import { setGameResultsApi, setPlayerStartTime, getArenaStateRef } from "../../lib/gameApi";
+import { GameResult, PlayerDataType, ArenaState } from "../../types/game";
 
 import SudokuGame from "../../components/games/SudokuGame";
 import SlidingPuzzle from "../../components/games/SlidingPuzzle";
@@ -37,11 +37,6 @@ const GAME_TIPS = [
     text: "Use arrow keys or WASD to navigate the 15-Puzzle. Click tiles adjacent to the empty space.",
   },
   {
-    icon: "vpn_key",
-    title: "Leader Device",
-    text: "Only the leader device can submit scores and advance to the next game. Coordinate with your team!",
-  },
-  {
     icon: "speed",
     title: "Speed Matters",
     text: "Your total time across both games determines your ranking. Be fast but accurate!",
@@ -59,15 +54,13 @@ const GAME_TIPS = [
 ];
 
 function WaitingScreen({
-  teamName,
-  gameStartTime,
-  currentTime,
-  formatTimeUntilStart,
+  playerName,
+  arenaStatus,
+  onStartPlaying,
 }: {
-  teamName: string | null;
-  gameStartTime: number | undefined;
-  currentTime: number;
-  formatTimeUntilStart: (ms: number) => string;
+  playerName: string | null;
+  arenaStatus: "idle" | "open" | "closed";
+  onStartPlaying: () => void;
 }) {
   const [tipIndex, setTipIndex] = useState(0);
   const [tipVisible, setTipVisible] = useState(true);
@@ -88,49 +81,67 @@ function WaitingScreen({
 
   return (
     <div className="flex flex-col items-center justify-center py-10 sm:py-16 text-center">
-      {/* Team name badge */}
-      {teamName && (
+      {/* Player name badge */}
+      {playerName && (
         <div className="mb-6 px-5 py-2 bg-[#19D1E6]/8 border border-[#19D1E6]/20 rounded-full">
           <span className="text-xs font-mono text-[#19D1E6] uppercase tracking-wider">
-            Team: <span className="font-bold">{teamName}</span>
+            Player: <span className="font-bold">{playerName}</span>
           </span>
         </div>
       )}
 
-      {/* Animated waiting icon */}
-      <div className="relative mb-6">
-        <div className="w-20 h-20 rounded-full bg-[#19D1E6]/5 border-2 border-[#19D1E6]/20 flex items-center justify-center">
-          <span className="material-symbols-outlined text-[#19D1E6] text-4xl animate-pulse">
-            sports_esports
-          </span>
-        </div>
-        <div className="absolute inset-0 w-20 h-20 rounded-full border-2 border-[#19D1E6]/10 animate-ping" />
-      </div>
-
-      <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
-        Get Ready for the Arena!
-      </h2>
-      <p className="text-gray-400 text-sm max-w-md mb-6">
-        The competition will begin when the organizer starts the game.
-        Review the tips below while you wait.
-      </p>
-
-      {/* Countdown display */}
-      {gameStartTime && (
-        <div className="mb-8 px-6 py-3 bg-gray-900/80 border border-[#19D1E6]/20 rounded-2xl text-[#19D1E6] font-mono text-sm shadow-inner backdrop-blur-sm">
-          {gameStartTime > currentTime ? (
-            <>
-              ⏱ Starting in:{" "}
-              <span className="font-bold text-base">
-                {formatTimeUntilStart(gameStartTime - currentTime)}
+      {arenaStatus === "idle" && (
+        <>
+          <div className="relative mb-6">
+            <div className="w-20 h-20 rounded-full bg-[#19D1E6]/5 border-2 border-[#19D1E6]/20 flex items-center justify-center">
+              <span className="material-symbols-outlined text-[#19D1E6] text-4xl animate-pulse">
+                sports_esports
               </span>
-            </>
-          ) : (
-            <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#19D1E6] animate-ping" />
-              Arena starting momentarily...
+            </div>
+            <div className="absolute inset-0 w-20 h-20 rounded-full border-2 border-[#19D1E6]/10 animate-ping" />
+          </div>
+
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
+            Get Ready for the Arena!
+          </h2>
+          <p className="text-gray-400 text-sm max-w-md mb-8">
+            The competition will begin when the organizer starts the arena.
+            Review the tips below while you wait.
+          </p>
+        </>
+      )}
+
+      {arenaStatus === "open" && (
+        <div className="mb-8 flex flex-col items-center animate-fadeIn">
+          <button
+            onClick={onStartPlaying}
+            className="group relative px-12 py-6 bg-gradient-to-r from-[#19D1E6] to-[#0ea5c7] text-black font-black text-2xl rounded-2xl transition-all duration-300 hover:shadow-[0_0_50px_rgba(25,209,230,0.5)] hover:scale-105 active:scale-95"
+          >
+            <span className="flex items-center gap-3">
+              <span className="material-symbols-outlined text-3xl">play_arrow</span>
+              START PLAYING
             </span>
-          )}
+            <div className="absolute inset-0 rounded-2xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute -inset-2 rounded-[24px] border-2 border-[#19D1E6]/30 animate-pulse pointer-events-none" />
+          </button>
+          <p className="mt-4 text-emerald-400 font-mono text-sm tracking-widest uppercase flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            Arena is open
+          </p>
+        </div>
+      )}
+
+      {arenaStatus === "closed" && (
+        <div className="mb-8 flex flex-col items-center">
+          <div className="inline-flex p-4 bg-red-950/30 border border-red-500/30 text-red-500 rounded-full mb-4">
+            <span className="material-symbols-outlined text-4xl">block</span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2">
+            Arena Closed
+          </h2>
+          <p className="text-gray-400 text-sm max-w-md mb-6">
+            The arena has ended. You didn't start in time.
+          </p>
         </div>
       )}
 
@@ -204,23 +215,22 @@ export default function GamePage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const teamName = searchParams.get("team") || "";
-  const isEditable = searchParams.get("editable") === "true";
+  // Retrieve player name
+  const playerNameParam = searchParams.get("player") || "";
 
   const [currentGameIndex, setCurrentGameIndex] = useState<number>(0);
   const [gameState, setGameState] = useState<
-    "waiting" | "countdown" | "playing" | "finished" | "submitting"
+    "waiting" | "playing" | "finished" | "submitting"
   >("waiting");
 
-  const [countdownTime, setCountdownTime] = useState<number>(3); // Default 3 seconds countdown
   const [totalTimeTaken, setTotalTimeTaken] = useState<number>(0);
-  const [gameStartTime, setGameStartTime] = useState<number | undefined>(undefined);
-  const [gameOpenTime, setGameOpenTime] = useState<number | undefined>(undefined);
-  const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  const [playerStartTime, setPlayerStartTimeState] = useState<number | undefined>(undefined);
 
   const [gameResults, setGameResults] = useState<GameResult[]>([]);
-  const [teamNameState, setTeamNameState] = useState<string | null>(null);
-  const [isTeamValid, setIsTeamValid] = useState<boolean | null>(null); // null = loading, true = valid, false = invalid
+  const [playerName, setPlayerName] = useState<string | null>(null);
+  const [isPlayerValid, setIsPlayerValid] = useState<boolean | null>(null); // null = loading, true = valid, false = invalid
+
+  const [arenaState, setArenaStateLocal] = useState<ArenaState | null>(null);
 
   // Add game win states tracking
   const [gameWinStates, setGameWinStates] = useState<Record<string, boolean>>({
@@ -228,52 +238,46 @@ export default function GamePage() {
     "15puzzle": false,
   });
 
-  // COUNTDOWN_PERIOD_MS is the period before the game start when countdown should begin (5 minutes)
-  const COUNTDOWN_PERIOD_MS = 5 * 60 * 1000;
-
-  // Initialize and validate team parameter
+  // Initialize and validate player parameter
   useEffect(() => {
-    if (!teamName) {
+    if (!playerNameParam) {
       navigate("/");
       return;
     }
-    setTeamNameState(teamName);
-  }, [teamName, navigate]);
+    setPlayerName(playerNameParam);
+  }, [playerNameParam, navigate]);
 
-  // Load team data from Firebase and set the proper game state
+  // Load arena state
   useEffect(() => {
-    if (!teamNameState) return;
-    const documentRef = doc(db, "teams", teamNameState);
+    const stateRef = getArenaStateRef();
+    const unsub = onSnapshot(stateRef, (snap) => {
+      if (snap.exists()) {
+        setArenaStateLocal(snap.data() as ArenaState);
+      } else {
+        setArenaStateLocal({ arenaStatus: "idle", arenaOpenedAt: null, arenaWindowMs: 1800000 });
+      }
+    });
+    return unsub;
+  }, []);
+
+  // Load player data from Firebase
+  useEffect(() => {
+    if (!playerName) return;
+    const documentRef = doc(db, "players", playerName);
 
     const unsubscribe = onSnapshot(
       documentRef,
       (documentSnapshot) => {
         if (documentSnapshot.exists()) {
-          setIsTeamValid(true);
-          const data = documentSnapshot.data() as TeamDataType & {
-            gameStartTime?: any;
-          };
+          setIsPlayerValid(true);
+          const data = documentSnapshot.data() as PlayerDataType;
 
           // Sync start time from Firestore if set
-          if (data.gameStartTime) {
-            const timestamp = data.gameStartTime;
-            let timeVal: number | undefined = undefined;
-            if (timestamp && typeof timestamp.toDate === "function") {
-              timeVal = timestamp.toDate().getTime();
-            } else if (typeof timestamp === "number") {
-              timeVal = timestamp;
-            } else if (timestamp) {
-              timeVal = new Date(timestamp).getTime();
-            }
-
-            if (timeVal) {
-              setGameStartTime(timeVal);
-              setGameOpenTime(timeVal);
-            }
+          if (data.playerStartTime) {
+            setPlayerStartTimeState(data.playerStartTime);
           } else {
-            setGameStartTime(undefined);
-            setGameOpenTime(undefined);
-            localStorage.removeItem(`nexa_start_${teamNameState}`);
+            setPlayerStartTimeState(undefined);
+            localStorage.removeItem(`nexa_start_${playerName}`);
           }
 
           if (data.totalTimeTaken !== undefined) {
@@ -313,42 +317,43 @@ export default function GamePage() {
             setCurrentGameIndex(0);
           }
         } else {
-          setIsTeamValid(false);
-          console.log("Team document does not exist. Access blocked.");
+          setIsPlayerValid(false);
+          console.log("Player document does not exist. Access blocked.");
         }
       },
       (err) => {
         console.error("Firestore listening error:", err);
-        setIsTeamValid(false);
+        setIsPlayerValid(false);
       }
     );
 
     return unsubscribe;
-  }, [teamNameState]);
+  }, [playerName]);
 
-  // Check game state on initialization and when time/gameStartTime updates
+  // Determine game state
   useEffect(() => {
-    const timer = setInterval(() => {
-      const now = Date.now();
-      setCurrentTime(now);
+    if (gameState === "finished" || gameState === "submitting" || !arenaState) return;
 
-      // If gameStartTime exists, the admin has started the game. Start immediately.
-      if (
-        currentGameIndex === 0 &&
-        gameStartTime &&
-        gameResults.length === 0
-      ) {
-        if (gameState !== "playing") {
-          setGameState("playing");
-          if (!localStorage.getItem(`nexa_start_${teamNameState}`)) {
-            localStorage.setItem(`nexa_start_${teamNameState}`, Date.now().toString());
-          }
-        }
-      }
-    }, 1000);
+    if (playerStartTime && gameResults.length < GAMES.length) {
+      setGameState("playing");
+    } else {
+      setGameState("waiting");
+    }
+  }, [playerStartTime, gameResults.length, arenaState, gameState]);
 
-    return () => clearInterval(timer);
-  }, [gameState, gameStartTime, currentGameIndex, gameResults, currentTime]);
+  // Start Playing handler
+  const handleStartPlaying = async () => {
+    if (!playerName) return;
+    const now = Date.now();
+    setPlayerStartTimeState(now);
+    localStorage.setItem(`nexa_start_${playerName}`, now.toString());
+    setGameState("playing");
+    try {
+      await setPlayerStartTime(playerName, now);
+    } catch (err) {
+      console.error("Failed to set player start time", err);
+    }
+  };
 
   // Function to update win state for current game
   const updateGameWinState = (isWon: boolean) => {
@@ -373,15 +378,15 @@ export default function GamePage() {
   // Handle game completion - memoized to prevent recreating on every render
   const handleGameComplete = useCallback(async () => {
     // Only allow completion if current game is won
-    if (!teamNameState || !isCurrentGameWon()) return;
+    if (!playerName || !isCurrentGameWon()) return;
 
     // Calculate time taken
     const endTime = Date.now();
-    let baseTime = gameOpenTime;
+    let baseTime = playerStartTime;
     
     // Override with local start time if available to prevent clock skew
-    if (teamNameState) {
-      const localStartStr = localStorage.getItem(`nexa_start_${teamNameState}`);
+    if (playerName) {
+      const localStartStr = localStorage.getItem(`nexa_start_${playerName}`);
       if (localStartStr) {
         baseTime = parseInt(localStartStr, 10);
       }
@@ -417,7 +422,7 @@ export default function GamePage() {
 
     // Save to Firebase first
     try {
-      await setGameResultsApi(teamNameState, newResults, newTotalTime);
+      await setGameResultsApi(playerName, newResults, newTotalTime);
 
       // After successful save, check if we're done or move to next game
       if (currentGameIndex < GAMES.length - 1) {
@@ -440,39 +445,19 @@ export default function GamePage() {
       }
     }
   }, [
-    teamNameState,
+    playerName,
     isCurrentGameWon,
-    gameOpenTime,
+    playerStartTime,
     gameResults,
     currentGameIndex,
     totalTimeTaken,
   ]);
 
-  // Format the countdown time for display
-  const formatCountdown = (timeInSeconds: number): string => {
-    const minutes = Math.floor(timeInSeconds / 60);
-    const seconds = timeInSeconds % 60;
-    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-  };
-
-  // Format the time until start
-  const formatTimeUntilStart = (milliseconds: number): string => {
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-
-    if (minutes > 0) {
-      return `${minutes} minute${minutes !== 1 ? "s" : ""} and ${remainingSeconds} second${remainingSeconds !== 1 ? "s" : ""}`;
-    } else {
-      return `${remainingSeconds} second${remainingSeconds !== 1 ? "s" : ""}`;
-    }
-  };
-
   // Get Current game component
   const CurrentGame =
     currentGameIndex < GAMES.length ? GAMES[currentGameIndex].component : null;
 
-  if (!teamNameState) {
+  if (!playerName) {
     return (
       <div className="min-h-screen bg-[#0e1115] text-[#19D1E6] flex flex-col items-center justify-center font-mono">
         <Suspense fallback={null}>
@@ -484,19 +469,19 @@ export default function GamePage() {
     );
   }
 
-  if (isTeamValid === null) {
+  if (isPlayerValid === null || arenaState === null) {
     return (
       <div className="min-h-screen bg-[#0e1115] text-[#19D1E6] flex flex-col items-center justify-center font-mono">
         <Suspense fallback={null}>
           <CustomCursor />
         </Suspense>
         <span className="material-symbols-outlined animate-spin text-4xl mb-3">sync</span>
-        Validating Team...
+        Loading...
       </div>
     );
   }
 
-  if (isTeamValid === false) {
+  if (isPlayerValid === false) {
     return (
       <div className="min-h-screen bg-[#0c0e12] text-gray-200 p-6 flex flex-col items-center justify-center font-mono">
         <Suspense fallback={null}>
@@ -506,16 +491,16 @@ export default function GamePage() {
           <div className="inline-flex p-3 bg-red-950/30 border border-red-500/30 text-red-500 rounded-full mb-4">
             <span className="material-symbols-outlined text-4xl">error</span>
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Team Not Registered</h2>
+          <h2 className="text-xl font-bold text-white mb-2">Player Not Registered</h2>
           <p className="text-gray-400 text-sm mb-6">
-            The team <span className="text-red-400 font-semibold">"{teamNameState}"</span> could not be found. Please register your team to enter the Nexa Tech Arena.
+            The player <span className="text-red-400 font-semibold">"{playerName}"</span> could not be found. Please register to enter the Nexa Tech Arena.
           </p>
           <div className="flex flex-col gap-3">
             <button
               onClick={() => navigate("/game/register")}
               className="w-full py-3 bg-[#19D1E6] hover:bg-[#19D1E6]/90 text-[#0e0e0e] font-bold rounded-xl text-sm transition duration-200"
             >
-              Register Team
+              Register Player
             </button>
             <button
               onClick={() => navigate("/")}
@@ -541,7 +526,7 @@ export default function GamePage() {
             <span className="material-symbols-outlined text-[#19D1E6] text-3xl">sports_esports</span>
             <div>
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                Team: <span className="text-[#19D1E6]">{teamNameState}</span>
+                Player: <span className="text-[#19D1E6]">{playerName}</span>
               </h1>
               <p className="text-xs text-gray-400">NEXA Tech Arena Challenge</p>
             </div>
@@ -623,26 +608,10 @@ export default function GamePage() {
           {/* Waiting State - Buffer screen with tips */}
           {gameState === "waiting" && (
             <WaitingScreen
-              teamName={teamNameState}
-              gameStartTime={gameStartTime}
-              currentTime={currentTime}
-              formatTimeUntilStart={formatTimeUntilStart}
+              playerName={playerName}
+              arenaStatus={arenaState.arenaStatus}
+              onStartPlaying={handleStartPlaying}
             />
-          )}
-
-          {/* Countdown - Only for first game */}
-          {gameState === "countdown" && (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <span className="text-xs uppercase tracking-[0.2em] text-[#19D1E6]/70 mb-3 font-semibold">
-                Arena opening in
-              </span>
-              <div className="text-7xl font-extrabold text-[#19D1E6] font-mono drop-shadow-[0_0_20px_rgba(25,209,230,0.5)] animate-pulse">
-                {formatCountdown(countdownTime)}
-              </div>
-              <p className="mt-4 text-gray-400 text-sm">
-                First game up: <span className="text-white font-semibold">{GAMES[0].name}</span>
-              </p>
-            </div>
           )}
 
           {/* Playing Game State */}
@@ -660,13 +629,11 @@ export default function GamePage() {
                 </div>
                 <button
                   onClick={handleGameComplete}
-                  disabled={!isCurrentGameWon() || !isEditable}
+                  disabled={!isCurrentGameWon()}
                   className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm tracking-wide transition duration-300 active:scale-95 ${
-                    isCurrentGameWon() && isEditable
+                    isCurrentGameWon()
                       ? "bg-[#19D1E6] hover:bg-[#19D1E6]/90 text-[#0e0e0e] shadow-[0_0_15px_rgba(25,209,230,0.35)]"
-                      : isCurrentGameWon()
-                        ? "bg-gray-800 text-gray-400 cursor-not-allowed border border-gray-700/50"
-                        : "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-800/80"
+                      : "bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-800/80"
                   }`}
                 >
                   <span className="material-symbols-outlined text-base">
@@ -674,9 +641,7 @@ export default function GamePage() {
                   </span>
                   {!isCurrentGameWon()
                     ? "Solve Puzzle to Unlock"
-                    : isEditable
-                      ? "Next Game"
-                      : "Leader Only"}
+                    : "Next Game"}
                 </button>
               </div>
 
@@ -698,7 +663,7 @@ export default function GamePage() {
               </span>
               <h2 className="text-xl font-bold text-white mb-2">Syncing Results</h2>
               <p className="text-gray-400 text-sm max-w-sm">
-                Updating your team's score in the cloud database...
+                Updating your score in the cloud database...
               </p>
             </div>
           )}
@@ -783,6 +748,16 @@ export default function GamePage() {
           </div>
         )}
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.5s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }

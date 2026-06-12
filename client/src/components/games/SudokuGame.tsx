@@ -346,7 +346,7 @@ export default function SudokuGame({ isWon, setIsWon }: SudokuGameProps) {
         <button
           onClick={triggerAutoSolve}
           disabled={isWon}
-          className="text-gray-500 hover:text-[#19D1E6] transition hover:underline active:scale-95"
+          className="hidden text-gray-500 hover:text-[#19D1E6] transition hover:underline active:scale-95"
         >
           [Dev: Autofill Board]
         </button>

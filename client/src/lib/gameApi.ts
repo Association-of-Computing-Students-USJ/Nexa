@@ -1,13 +1,13 @@
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "./firebase";
-import { GameResult } from "../types/game";
+import { GameResult, ArenaState } from "../types/game";
 
 export async function setGameResultsApi(
-  teamName: string,
+  playerName: string,
   gameResults: GameResult[],
   totalTimeTaken: number
 ) {
-  const docRef = doc(db, "teams", teamName);
+  const docRef = doc(db, "players", playerName);
   await setDoc(
     docRef,
     {
@@ -16,4 +16,21 @@ export async function setGameResultsApi(
     },
     { merge: true }
   );
+}
+
+// Set the player's individual start time
+export async function setPlayerStartTime(playerName: string, startTime: number) {
+  const docRef = doc(db, "players", playerName);
+  await updateDoc(docRef, { playerStartTime: startTime });
+}
+
+// Arena state document reference
+export function getArenaStateRef() {
+  return doc(db, "arenaConfig", "state");
+}
+
+// Admin: set arena state
+export async function setArenaState(state: Partial<ArenaState>) {
+  const docRef = getArenaStateRef();
+  await setDoc(docRef, state, { merge: true });
 }

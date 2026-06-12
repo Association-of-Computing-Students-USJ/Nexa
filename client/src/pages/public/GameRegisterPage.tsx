@@ -1,30 +1,46 @@
-import React, { useState, lazy, Suspense } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { getArenaStateRef } from "../../lib/gameApi";
+import { ArenaState } from "../../types/game";
 
 const CustomCursor = lazy(() => import("../../components/CustomCursor"));
 
 export default function GameRegisterPage() {
   const navigate = useNavigate();
 
-  const [teamName, setTeamName] = useState("");
+  const [playerName, setPlayerName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successData, setSuccessData] = useState<{
-    teamName: string;
-    leaderUrl: string;
-    memberUrl: string;
+    playerName: string;
+    gameUrl: string;
   } | null>(null);
 
-  const [copiedType, setCopiedType] = useState<"leader" | "member" | null>(null);
+  const [copiedType, setCopiedType] = useState<"link" | null>(null);
 
-  // Normalise team name: trim, remove double spaces, keep alphanumeric/spaces/hyphens
-  const cleanTeamName = (name: string): string => {
+  const [arenaState, setArenaStateLocal] = useState<ArenaState | null>(null);
+
+  useEffect(() => {
+    const stateRef = getArenaStateRef();
+    const unsub = onSnapshot(stateRef, (snap) => {
+      if (snap.exists()) {
+        setArenaStateLocal(snap.data() as ArenaState);
+      } else {
+        // Default: arena is idle
+        setArenaStateLocal({ arenaStatus: "idle", arenaOpenedAt: null, arenaWindowMs: 1800000 });
+      }
+    });
+    return unsub;
+  }, []);
+
+  // Normalise player name: trim, remove double spaces, keep alphanumeric/spaces/hyphens
+  const cleanPlayerName = (name: string): string => {
     return name
       .trim()
       .replace(/\s+/g, " ")
-      .replace(/[^a-zA-Z0-9\s-_]/g, "");
+      .replace(/[^a-zA-Z0-9 -]/g, "");
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -32,25 +48,25 @@ export default function GameRegisterPage() {
     setError("");
     setLoading(true);
 
-    const normalisedName = cleanTeamName(teamName);
+    const normalisedName = cleanPlayerName(playerName);
 
     if (normalisedName.length < 3) {
-      setError("Team name must be at least 3 characters.");
+      setError("Player name must be at least 3 characters long.");
       setLoading(false);
       return;
     }
 
     try {
-      const docRef = doc(db, "teams", normalisedName);
+      const docRef = doc(db, "players", normalisedName);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        setError(`A team named "${normalisedName}" is already registered. Please choose another name.`);
+        setError(`The name "${normalisedName}" is already registered. Please choose another name.`);
         setLoading(false);
         return;
       }
 
-      // Create the team document in Firestore
+      // Create the player document in Firestore
       await setDoc(docRef, {
         registeredAt: serverTimestamp(),
         gameResults: [],
@@ -59,27 +75,27 @@ export default function GameRegisterPage() {
 
       // Generate local URLs
       const origin = window.location.origin;
-      const leaderUrl = `${origin}/game?team=${encodeURIComponent(normalisedName)}&editable=true`;
-      const memberUrl = `${origin}/game?team=${encodeURIComponent(normalisedName)}`;
+      const gameUrl = `${origin}/game?player=${encodeURIComponent(normalisedName)}`;
 
       setSuccessData({
-        teamName: normalisedName,
-        leaderUrl,
-        memberUrl,
+        playerName: normalisedName,
+        gameUrl,
       });
     } catch (err: any) {
-      console.error("Team registration error:", err);
+      console.error("Registration error:", err);
       setError("An error occurred during registration. Please verify your connection and try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const copyToClipboard = (text: string, type: "leader" | "member") => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedType(type);
+    setCopiedType("link");
     setTimeout(() => setCopiedType(null), 2000);
   };
+
+  const isArenaClosed = arenaState?.arenaStatus === "closed" || (arenaState?.arenaStatus === "open" && arenaState.arenaOpenedAt && Date.now() > arenaState.arenaOpenedAt + arenaState.arenaWindowMs);
 
   return (
     <div className="min-h-screen bg-[#0c0e12] text-gray-200 p-4 flex flex-col items-center justify-center relative overflow-hidden">
@@ -98,16 +114,32 @@ export default function GameRegisterPage() {
             <span className="text-2xl font-bold tracking-tight text-[#19D1E6] hover:opacity-95 transition">NEXA</span>
           </Link>
           <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Arena Team Registration
+            Arena Registration
           </h1>
           <p className="text-xs text-gray-400 mt-2">
-            Register your team to unlock the Sudoku & 15-Puzzle Arena.
+            Register to unlock the Sudoku & 15-Puzzle Arena.
           </p>
         </div>
 
         {/* Form panel */}
         <div className="bg-[#13171f] border border-gray-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
-          {!successData ? (
+          {isArenaClosed ? (
+            <div className="text-center py-6">
+              <div className="inline-flex p-3 bg-red-950/30 border border-red-500/30 text-red-500 rounded-full mb-4">
+                <span className="material-symbols-outlined text-4xl">block</span>
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">Registration Closed</h2>
+              <p className="text-gray-400 text-sm mb-6">
+                The arena has ended. Registration is closed.
+              </p>
+              <button
+                onClick={() => navigate("/")}
+                className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl text-sm transition duration-200"
+              >
+                Return to Homepage
+              </button>
+            </div>
+          ) : !successData ? (
             <form onSubmit={handleRegister} className="space-y-6">
               {error && (
                 <div className="flex items-start gap-2.5 p-3.5 bg-red-950/40 border border-red-500/35 text-red-400 rounded-xl text-xs leading-relaxed">
@@ -116,24 +148,23 @@ export default function GameRegisterPage() {
                 </div>
               )}
 
-              <div>
-                <label htmlFor="team-name-input" className="block text-xs uppercase tracking-wider text-gray-400 font-mono font-semibold mb-2">
-                  Choose Team Name
+              <div className="mb-6 relative">
+                <label htmlFor="player-name-input" className="block text-xs uppercase tracking-wider text-gray-400 font-mono font-semibold mb-2">
+                  Full Name
                 </label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600 text-base pointer-events-none">
-                    groups
+                    person
                   </span>
                   <input
-                    id="team-name-input"
                     type="text"
-                    required
-                    placeholder="Enter team name (e.g. Code Knights)"
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
+                    id="player-name-input"
+                    autoComplete="off"
+                    placeholder="E.g. Vidura Deshan"
+                    value={playerName}
+                    onChange={(e) => setPlayerName(e.target.value)}
                     disabled={loading}
-                    maxLength={30}
-                    className="w-full bg-[#0c0e12] border border-gray-800 text-white rounded-xl pl-10 pr-4 py-3.5 text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#19D1E6]/30 focus:border-[#19D1E6]/60 transition-colors disabled:opacity-50"
+                    className="w-full bg-[#161616] border border-[#2a2a2a] text-white rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-[#19D1E6]/30 focus:border-[#19D1E6]/60 transition-colors"
                   />
                 </div>
                 <p className="text-[10px] text-gray-500 mt-1.5 leading-relaxed">
@@ -143,8 +174,8 @@ export default function GameRegisterPage() {
 
               <button
                 type="submit"
-                disabled={loading || !teamName.trim()}
-                className="w-full py-4 bg-[#19D1E6] hover:bg-[#19D1E6]/90 disabled:bg-gray-800 disabled:text-gray-500 text-[#0e0e0e] font-bold rounded-xl text-sm transition-all duration-300 active:scale-98 disabled:opacity-50 shadow-lg hover:shadow-[#19D1E6]/20 flex items-center justify-center gap-2"
+                disabled={loading || !playerName.trim()}
+                className="w-full relative group overflow-hidden bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-xl px-4 py-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-[0_0_20px_rgba(25,209,230,0.3)] flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
@@ -152,12 +183,12 @@ export default function GameRegisterPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" />
                     </svg>
-                    Validating Team Name...
+                    Validating Name...
                   </>
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-base">how_to_reg</span>
-                    Register Team
+                    Register
                   </>
                 )}
               </button>
@@ -168,64 +199,40 @@ export default function GameRegisterPage() {
                 <div className="inline-flex p-3 bg-emerald-950/30 border border-emerald-500/30 text-emerald-400 rounded-full mb-3">
                   <span className="material-symbols-outlined text-3xl">task_alt</span>
                 </div>
-                <h3 className="text-lg font-bold text-white">Team Registered!</h3>
-                <p className="text-xs text-gray-400 mt-1">
-                  Team: <span className="text-[#19D1E6] font-semibold">{successData.teamName}</span>
+                <h3 className="text-lg font-bold text-white">Registered Successfully!</h3>
+                <p className="text-gray-300">
+                  Player: <span className="text-[#19D1E6] font-semibold">{successData.playerName}</span>
                 </p>
               </div>
 
-              {/* Leader Link Box */}
+              {/* Game Link Box */}
               <div className="p-4 bg-gray-900/60 border border-[#19D1E6]/20 rounded-2xl relative">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-[10px] uppercase tracking-wider text-[#19D1E6] font-mono font-bold">
-                    🔑 Leader Play Link (Editable)
+                    🔑 Your Game Link
                   </span>
                   <button
-                    onClick={() => copyToClipboard(successData.leaderUrl, "leader")}
+                    onClick={() => copyToClipboard(successData.gameUrl)}
                     className="text-gray-400 hover:text-white transition flex items-center gap-1 text-[11px]"
                   >
                     <span className="material-symbols-outlined text-xs">
-                      {copiedType === "leader" ? "check" : "content_copy"}
+                      {copiedType === "link" ? "check" : "content_copy"}
                     </span>
-                    {copiedType === "leader" ? "Copied" : "Copy"}
+                    {copiedType === "link" ? "Copied" : "Copy"}
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 leading-relaxed mb-2">
-                  Use this link on the primary device. This link has access to submit solved stages to advance the team.
+                  Use this link to play the game. Keep it safe!
                 </p>
                 <div className="bg-[#0c0e12] px-3 py-2 rounded-lg text-xs font-mono text-gray-300 select-all truncate">
-                  {successData.leaderUrl}
-                </div>
-              </div>
-
-              {/* Members Link Box */}
-              <div className="p-4 bg-gray-900/40 border border-gray-800 rounded-2xl">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-[10px] uppercase tracking-wider text-gray-400 font-mono font-bold">
-                    👥 Teammates Link (View Only)
-                  </span>
-                  <button
-                    onClick={() => copyToClipboard(successData.memberUrl, "member")}
-                    className="text-gray-400 hover:text-white transition flex items-center gap-1 text-[11px]"
-                  >
-                    <span className="material-symbols-outlined text-xs">
-                      {copiedType === "member" ? "check" : "content_copy"}
-                    </span>
-                    {copiedType === "member" ? "Copied" : "Copy"}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 leading-relaxed mb-2">
-                  Share this with your teammates so they can watch live progress, solve puzzles, and align on their screens.
-                </p>
-                <div className="bg-[#0c0e12] px-3 py-2 rounded-lg text-xs font-mono text-gray-400 select-all truncate">
-                  {successData.memberUrl}
+                  {successData.gameUrl}
                 </div>
               </div>
 
               {/* Launch Arena Button */}
               <button
-                onClick={() => navigate(`/game?team=${encodeURIComponent(successData.teamName)}&editable=true`)}
-                className="w-full py-4 bg-[#19D1E6] hover:bg-[#19D1E6]/90 text-[#0e0e0e] font-bold rounded-xl text-sm transition-all duration-300 active:scale-98 shadow-lg hover:shadow-[#19D1E6]/20 flex items-center justify-center gap-2"
+                onClick={() => navigate(`/game?player=${encodeURIComponent(successData.playerName)}`)}
+                className="w-full relative group overflow-hidden bg-[#19D1E6] text-[#0e0e0e] font-bold rounded-xl px-4 py-4 mt-6 transition-all duration-300 hover:shadow-[0_0_20px_rgba(25,209,230,0.3)] flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-base">rocket_launch</span>
                 Launch Game Arena
