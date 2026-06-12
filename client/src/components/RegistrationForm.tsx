@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, doc, runTransaction, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
+import { collection, doc, writeBatch, serverTimestamp, updateDoc, addDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { buildRegistrationEmailHtml } from "../lib/registrationEmail";
 
@@ -205,23 +205,30 @@ export default function RegistrationForm() {
     setErrors((prev) => ({ ...prev, [name]: errs[name as keyof FormFields] }));
   }
 
+  const isSubmitting = useRef(false);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setTouched(Object.fromEntries(Object.keys(fields).map((k) => [k, true])));
-    const errs = validate(fields);
-    setErrors(errs);
-    if (Object.keys(errs).length) return;
 
-    // Check if reCAPTCHA is available before proceeding
-    if (!recaptchaLoaded || !(window as any).grecaptcha) {
-      setApiError("reCAPTCHA is blocked. Please disable your ad-blocker or Brave Shields to complete registration.");
-      return;
-    }
-
-    setStatus("loading");
-    setApiError("");
+    // Prevent double submission from quick double taps on Android
+    if (isSubmitting.current) return;
+    isSubmitting.current = true;
 
     try {
+      setTouched(Object.fromEntries(Object.keys(fields).map((k) => [k, true])));
+      const errs = validate(fields);
+      setErrors(errs);
+      if (Object.keys(errs).length) return;
+
+      // Check if reCAPTCHA is available before proceeding
+      if (!recaptchaLoaded || !(window as any).grecaptcha) {
+        setApiError("reCAPTCHA is blocked. Please disable your ad-blocker or Brave Shields to complete registration.");
+        return;
+      }
+
+      setStatus("loading");
+      setApiError("");
+
       const normalizedEmail = fields.email.toLowerCase().trim();
       const emailKey = emailToDocId(normalizedEmail);
 
@@ -230,47 +237,44 @@ export default function RegistrationForm() {
       // Obtain reCAPTCHA v3 token
       const recaptchaToken = await getRecaptchaToken();
 
-      // Attempt transaction
+      // Attempt batched write
       try {
-        registrationId = await runTransaction(db, async (transaction) => {
-          const emailLockRef = doc(db, "registrationEmails", emailKey);
-          const regRef = doc(collection(db, "registrations"));
+        const emailLockRef = doc(db, "registrationEmails", emailKey);
+        const regRef = doc(collection(db, "registrations"));
 
-          const registrationData = {
-            name: fields.name.trim(),
-            email: normalizedEmail,
-            phone: fields.phone.trim(),
-            whatsapp: fields.whatsapp.trim(),
-            university: fields.university.trim(),
-            year: fields.year,
-            registeredAt: serverTimestamp(),
-            attended: false,
-            attendedAt: null,
-            mealServed: false,
-            mealServedAt: null,
-            emailStatus: "pending",
-            recaptchaToken: recaptchaToken,
-          };
+        const registrationData = {
+          name: fields.name.trim(),
+          email: normalizedEmail,
+          phone: fields.phone.trim(),
+          whatsapp: fields.whatsapp.trim(),
+          university: fields.university.trim(),
+          year: fields.year,
+          registeredAt: serverTimestamp(),
+          attended: false,
+          attendedAt: null,
+          mealServed: false,
+          mealServedAt: null,
+          emailStatus: "pending",
+          recaptchaToken: recaptchaToken,
+        };
 
-            // Create-only lock doc — atomically check existence and abort if present.
-            const emailSnap = await transaction.get(emailLockRef);
-            if (emailSnap.exists()) {
-              // Throw an object with `code` so upstream handler can detect it.
-              throw { code: "permission-denied", message: "Email already registered" };
-            }
-          transaction.set(emailLockRef, {
-            email: normalizedEmail,
-            registrationId: regRef.id,
-            registeredAt: serverTimestamp(),
-            recaptchaToken: recaptchaToken,
-          });
-          transaction.set(regRef, registrationData);
+        const batch = writeBatch(db);
 
-          return regRef.id;
+        // This will fail with permission-denied if the document already exists,
+        // because the 'create' rule requires !exists() and 'update' is false.
+        batch.set(emailLockRef, {
+          email: normalizedEmail,
+          registrationId: regRef.id,
+          registeredAt: serverTimestamp(),
+          recaptchaToken: recaptchaToken,
         });
+        batch.set(regRef, registrationData);
+
+        await batch.commit();
+        registrationId = regRef.id;
       } catch (transactionErr: unknown) {
         const code = (transactionErr as { code?: string })?.code;
-        console.error("Transaction failed:", code, transactionErr);
+        console.error("Batch write failed:", code, transactionErr);
         if (code === "permission-denied") {
           setErrors({ email: "This email is already registered." });
           setStatus("error");
@@ -315,6 +319,8 @@ export default function RegistrationForm() {
       const msg = `Something went wrong${code ? ` (${code})` : ""}. Please try again or contact nexa.acs.sjp@gmail.com`;
       setApiError(msg);
       setStatus("error");
+    } finally {
+      isSubmitting.current = false;
     }
   }
 

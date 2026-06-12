@@ -1,5 +1,5 @@
 /** NEXA 2026 event date — update here to reflect across the site and tickets. */
-export const EVENT_DATE = "13th June 2026";
+export const EVENT_DATE = "8am · 13th June 2026";
 
 /** Production site URL — used for absolute image links in emails. */
 export const SITE_URL = "https://nexa-acsusj.web.app";
