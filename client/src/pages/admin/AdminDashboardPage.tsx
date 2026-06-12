@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   deleteDoc,
   doc,
@@ -12,6 +13,7 @@ import { db } from "../../lib/firebase";
 import { undoEntry, undoMeal } from "../../lib/checkIn";
 import { useRegistrations } from "../../context/RegistrationsContext";
 import type { Participant } from "../../types/participant";
+import { useAdminAccess } from "../../hooks/useAdminAccess";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -315,7 +317,11 @@ function DetailDrawer({ p, onClose }: { p: Participant; onClose: () => void }) {
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function AdminDashboardPage() {
+  const navigate = useNavigate();
   const { participants, loading, error: firestoreError } = useRegistrations();
+  const { accesses } = useAdminAccess();
+  const hasGameAccess = accesses.includes("game");
+
   const [activeTab, setActiveTab] = useState<"participants" | "teams">("participants");
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState("All");
@@ -404,35 +410,6 @@ export default function AdminDashboardPage() {
     setDeleting(false);
   }
 
-  // Global game control functions
-  async function triggerGlobalStart(offsetSeconds: number) {
-    try {
-      const startTime = Date.now() + (offsetSeconds * 1000);
-      const batch = writeBatch(db);
-      teams.forEach((t) => {
-        const docRef = doc(db, "teams", t.id);
-        batch.update(docRef, { gameStartTime: startTime });
-      });
-      await batch.commit();
-      alert(`Synchronized start time set to ${offsetSeconds === 0 ? "immediately" : `in ${offsetSeconds} seconds`} for all teams!`);
-    } catch (err: any) {
-      alert("Failed to set global start time: " + err.message);
-    }
-  }
-
-  async function clearAllStartTimes() {
-    try {
-      const batch = writeBatch(db);
-      teams.forEach((t) => {
-        const docRef = doc(db, "teams", t.id);
-        batch.update(docRef, { gameStartTime: null });
-      });
-      await batch.commit();
-      alert("Cleared start times for all teams.");
-    } catch (err: any) {
-      alert("Failed to clear start times: " + err.message);
-    }
-  }
 
   async function resetAllTeams() {
     if (!window.confirm("Are you sure you want to reset ALL teams' game progress? This will erase all play times!")) return;
@@ -766,6 +743,26 @@ export default function AdminDashboardPage() {
                 <h1 className="text-xl sm:text-2xl font-bold text-white">Game Teams</h1>
                 <p className="text-[#888] text-sm mt-0.5">Arena team progress & time management</p>
               </div>
+              <div className="flex items-center gap-2.5">
+                {hasGameAccess && (
+                  <>
+                    <button
+                      onClick={() => navigate("/admin/arena")}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#19D1E6] text-[#0e0e0e] font-semibold rounded-xl hover:bg-[#19D1E6]/90 transition-colors text-sm shrink-0"
+                    >
+                      <span className="material-symbols-outlined text-base">sports_esports</span>
+                      Open Arena
+                    </button>
+                    <button
+                      onClick={resetAllTeams}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 font-semibold rounded-xl text-sm transition duration-200 shrink-0"
+                    >
+                      <span className="material-symbols-outlined text-base">restart_alt</span>
+                      Reset All
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Stat cards */}
@@ -774,56 +771,6 @@ export default function AdminDashboardPage() {
               <StatCard icon="hourglass_empty" label="Waiting" value={waitingTeamsCount} />
               <StatCard icon="play_arrow" label="In Progress" value={inProgressTeamsCount} />
               <StatCard icon="emoji_events" label="Completed" value={completedTeamsCount} />
-            </div>
-
-            {/* Global Arena Control */}
-            <div className="bg-[#161616] border border-[#2a2a2a] rounded-2xl p-5 shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#19D1E6]/3 rounded-full blur-2xl pointer-events-none" />
-              <h3 className="font-bold text-white text-base mb-1.5 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#19D1E6]">sync_lock</span>
-                Global Arena Control
-              </h3>
-              <p className="text-[#888] text-xs mb-4 leading-relaxed max-w-2xl">
-                Synchronize the start times for all registered teams. If a start time is set, a countdown will automatically display for all teams. Once the countdown completes, the play mode unlocks.
-              </p>
-              <div className="flex flex-wrap gap-2.5 items-center">
-                <button
-                  onClick={() => triggerGlobalStart(10)}
-                  className="px-4 py-2.5 bg-[#19D1E6]/10 hover:bg-[#19D1E6]/20 text-[#19D1E6] border border-[#19D1E6]/30 font-semibold rounded-xl text-xs transition duration-200"
-                >
-                  Start in 10 Seconds
-                </button>
-                <button
-                  onClick={() => triggerGlobalStart(60)}
-                  className="px-4 py-2.5 bg-[#19D1E6]/10 hover:bg-[#19D1E6]/20 text-[#19D1E6] border border-[#19D1E6]/30 font-semibold rounded-xl text-xs transition duration-200"
-                >
-                  Start in 1 Minute
-                </button>
-                <button
-                  onClick={() => triggerGlobalStart(300)}
-                  className="px-4 py-2.5 bg-[#19D1E6]/10 hover:bg-[#19D1E6]/20 text-[#19D1E6] border border-[#19D1E6]/30 font-semibold rounded-xl text-xs transition duration-200"
-                >
-                  Start in 5 Minutes
-                </button>
-                <button
-                  onClick={() => triggerGlobalStart(0)}
-                  className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl text-xs transition duration-200"
-                >
-                  Start Immediately
-                </button>
-                <button
-                  onClick={clearAllStartTimes}
-                  className="px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 font-semibold rounded-xl text-xs transition duration-200"
-                >
-                  Clear Countdowns
-                </button>
-                <button
-                  onClick={resetAllTeams}
-                  className="px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 font-semibold rounded-xl text-xs transition duration-200 sm:ml-auto"
-                >
-                  Reset All Teams
-                </button>
-              </div>
             </div>
 
             {/* Filters */}
@@ -953,20 +900,24 @@ export default function AdminDashboardPage() {
                               </td>
                               <td className="px-5 py-3.5">
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={() => handleResetTeam(t.id)}
-                                    className="p-1.5 rounded-lg text-[#555] hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
-                                    title="Reset Progress"
-                                  >
-                                    <span className="material-symbols-outlined text-base">restart_alt</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteTeam(t.id)}
-                                    className="p-1.5 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                                    title="Delete Team"
-                                  >
-                                    <span className="material-symbols-outlined text-base">delete</span>
-                                  </button>
+                                  {hasGameAccess && (
+                                    <>
+                                      <button
+                                        onClick={() => handleResetTeam(t.id)}
+                                        className="p-1.5 rounded-lg text-[#555] hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                                        title="Reset Progress"
+                                      >
+                                        <span className="material-symbols-outlined text-base">restart_alt</span>
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteTeam(t.id)}
+                                        className="p-1.5 rounded-lg text-[#555] hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                                        title="Delete Team"
+                                      >
+                                        <span className="material-symbols-outlined text-base">delete</span>
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1033,22 +984,24 @@ export default function AdminDashboardPage() {
                               </button>
                             </div>
 
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => handleResetTeam(t.id)}
-                                className="p-2 bg-gray-900 border border-[#2a2a2a] text-[#888] hover:text-amber-400 rounded-lg hover:bg-amber-500/10 transition-colors"
-                                title="Reset"
-                              >
-                                <span className="material-symbols-outlined text-base leading-none">restart_alt</span>
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTeam(t.id)}
-                                className="p-2 bg-gray-900 border border-[#2a2a2a] text-[#888] hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
-                                title="Delete"
-                              >
-                                <span className="material-symbols-outlined text-base leading-none">delete</span>
-                              </button>
-                            </div>
+                            {hasGameAccess && (
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => handleResetTeam(t.id)}
+                                  className="p-2 bg-gray-900 border border-[#2a2a2a] text-[#888] hover:text-amber-400 rounded-lg hover:bg-amber-500/10 transition-colors"
+                                  title="Reset"
+                                >
+                                  <span className="material-symbols-outlined text-base leading-none">restart_alt</span>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTeam(t.id)}
+                                  className="p-2 bg-gray-900 border border-[#2a2a2a] text-[#888] hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
+                                  title="Delete"
+                                >
+                                  <span className="material-symbols-outlined text-base leading-none">delete</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
