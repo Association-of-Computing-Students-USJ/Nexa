@@ -221,9 +221,9 @@ export default function SlidingPuzzle({ isWon, setIsWon, setFinalMoves }: Slidin
         </button>
         <button
           onClick={handleReset}
-          className="text-gray-500 hover:text-red-400 transition hover:underline active:scale-95"
+          className="py-2 px-4 bg-red-600 hover:bg-red-500 text-white rounded-xl transition duration-200 font-bold text-sm active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-red-900/20"
         >
-          [Reset Board]
+          Reset Board
         </button>
       </div>
     </div>
