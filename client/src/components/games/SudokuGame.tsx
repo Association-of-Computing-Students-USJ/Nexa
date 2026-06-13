@@ -162,21 +162,9 @@ export default function SudokuGame({ isWon, setIsWon, setFinalMoves }: SudokuGam
       if (!isSolved) break;
     }
 
-    // Double check against solution to be absolutely certain
     if (isSolved && !hasDuplicate) {
-      let matchesSolution = true;
-      for (let r = 0; r < 4; r++) {
-        for (let c = 0; c < 4; c++) {
-          if (currentBoard[r][c] !== SOLVED_BOARD[r][c]) {
-            matchesSolution = false;
-            break;
-          }
-        }
-      }
-      if (matchesSolution) {
-        setIsWon(true);
-        if (setFinalMoves) setFinalMoves(currentMoves);
-      }
+      setIsWon(true);
+      if (setFinalMoves) setFinalMoves(currentMoves);
     } else {
       setIsWon(false);
     }

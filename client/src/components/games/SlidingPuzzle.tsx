@@ -113,15 +113,24 @@ export default function SlidingPuzzle({ isWon, setIsWon, setFinalMoves }: Slidin
     checkWin(newBoard, moves + 1);
   };
 
+  // Vertical solved state: [1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15, 4, 8, 12, 0]
+  const VERTICAL_SOLVED_STATE = [
+    1, 5, 9, 13,
+    2, 6, 10, 14,
+    3, 7, 11, 15,
+    4, 8, 12, 0
+  ];
+
   const checkWin = (currentBoard: number[], currentMoves: number) => {
-    let matchesSolved = true;
+    let matchesHorizontal = true;
+    let matchesVertical = true;
+
     for (let i = 0; i < currentBoard.length; i++) {
-      if (currentBoard[i] !== SOLVED_STATE[i]) {
-        matchesSolved = false;
-        break;
-      }
+      if (currentBoard[i] !== SOLVED_STATE[i]) matchesHorizontal = false;
+      if (currentBoard[i] !== VERTICAL_SOLVED_STATE[i]) matchesVertical = false;
     }
-    if (matchesSolved) {
+
+    if (matchesHorizontal || matchesVertical) {
       setIsWon(true);
       if (setFinalMoves) setFinalMoves(currentMoves);
     } else {
