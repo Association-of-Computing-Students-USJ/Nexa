@@ -3,6 +3,7 @@ export interface GameResult {
   gameName: string;
   timeInMs: number;
   formattedTime: string;
+  moves?: number;
 }
 
 export interface PlayerDataType {

@@ -238,6 +238,8 @@ export default function GamePage() {
     "15puzzle": false,
   });
 
+  const [currentMoves, setCurrentMoves] = useState<number>(0);
+
   // Initialize and validate player parameter
   useEffect(() => {
     if (!playerNameParam) {
@@ -409,6 +411,7 @@ export default function GamePage() {
       gameName: GAMES[currentGameIndex].name,
       timeInMs: timeTaken,
       formattedTime: formattedTime,
+      moves: currentMoves,
     };
 
     const newTotalTime = totalTimeTaken + timeTaken;
@@ -428,6 +431,7 @@ export default function GamePage() {
       if (currentGameIndex < GAMES.length - 1) {
         // Move to next game
         setCurrentGameIndex(currentGameIndex + 1);
+        setCurrentMoves(0);
         setGameState("playing");
       } else {
         // All games completed
@@ -439,6 +443,7 @@ export default function GamePage() {
       // we still advance the game state locally so the user can test the transition.
       if (currentGameIndex < GAMES.length - 1) {
         setCurrentGameIndex(currentGameIndex + 1);
+        setCurrentMoves(0);
         setGameState("playing");
       } else {
         setGameState("finished");
@@ -451,6 +456,7 @@ export default function GamePage() {
     gameResults,
     currentGameIndex,
     totalTimeTaken,
+    currentMoves,
   ]);
 
   // Get Current game component
@@ -650,6 +656,7 @@ export default function GamePage() {
                 <CurrentGame
                   isWon={isCurrentGameWon()}
                   setIsWon={updateGameWinState}
+                  setFinalMoves={setCurrentMoves}
                 />
               </div>
             </div>
@@ -689,7 +696,12 @@ export default function GamePage() {
                   {gameResults.map((result, idx) => (
                     <div key={idx} className="py-3 flex justify-between items-center">
                       <span className="text-gray-300 font-medium">{result.gameName}</span>
-                      <span className="font-mono text-[#19D1E6]">{result.formattedTime}</span>
+                      <span className="font-mono text-[#19D1E6]">
+                        {result.formattedTime}
+                        {result.moves !== undefined && (
+                          <span className="text-gray-500 ml-1 text-xs">({result.moves} moves)</span>
+                        )}
+                      </span>
                     </div>
                   ))}
                   <div className="pt-4 mt-1 flex justify-between items-center font-bold text-base">
@@ -741,7 +753,12 @@ export default function GamePage() {
                     </span>
                     <span className="text-gray-300 font-medium">{result.gameName}</span>
                   </div>
-                  <span className="font-mono text-[#19D1E6]">{result.formattedTime}</span>
+                  <span className="font-mono text-[#19D1E6]">
+                    {result.formattedTime}
+                    {result.moves !== undefined && (
+                      <span className="text-gray-500 ml-1 text-xs">({result.moves} moves)</span>
+                    )}
+                  </span>
                 </div>
               ))}
             </div>

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 interface SudokuGameProps {
   isWon: boolean;
   setIsWon: (isWon: boolean) => void;
+  setFinalMoves?: (moves: number) => void;
 }
 
 // A pre-solved Sudoku board with a few empty cells (0 represents empty) for gameplay
@@ -31,7 +32,7 @@ const SOLVED_BOARD = [
   [3, 4, 5, 2, 8, 6, 1, 7, 9],
 ];
 
-export default function SudokuGame({ isWon, setIsWon }: SudokuGameProps) {
+export default function SudokuGame({ isWon, setIsWon, setFinalMoves }: SudokuGameProps) {
   const [board, setBoard] = useState<number[][]>(() =>
     INITIAL_BOARD.map((row) => [...row])
   );
@@ -39,6 +40,7 @@ export default function SudokuGame({ isWon, setIsWon }: SudokuGameProps) {
   const [errors, setErrors] = useState<boolean[][]>(() =>
     Array(9).fill(null).map(() => Array(9).fill(false))
   );
+  const [moves, setMoves] = useState<number>(0);
 
   // Keyboard navigation and entry
   useEffect(() => {
@@ -79,13 +81,14 @@ export default function SudokuGame({ isWon, setIsWon }: SudokuGameProps) {
       row.map((colVal, ci) => (ri === r && ci === c ? val : colVal))
     );
     setBoard(newBoard);
+    setMoves((m) => m + 1);
 
     // Validate the new board and update errors
-    validateBoard(newBoard);
+    validateBoard(newBoard, moves + 1);
   };
 
   // Check rows, columns, and 3x3 blocks for duplicates
-  const validateBoard = (currentBoard: number[][]) => {
+  const validateBoard = (currentBoard: number[][], currentMoves: number = moves) => {
     const newErrors = Array(9)
       .fill(null)
       .map(() => Array(9).fill(false));
@@ -182,6 +185,7 @@ export default function SudokuGame({ isWon, setIsWon }: SudokuGameProps) {
       }
       if (matchesSolution) {
         setIsWon(true);
+        if (setFinalMoves) setFinalMoves(currentMoves);
       }
     } else {
       setIsWon(false);
@@ -205,7 +209,7 @@ export default function SudokuGame({ isWon, setIsWon }: SudokuGameProps) {
       }
     }
     setBoard(almostSolved);
-    validateBoard(almostSolved);
+    validateBoard(almostSolved, moves);
     // Select the empty cell
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 9; c++) {
@@ -354,6 +358,7 @@ export default function SudokuGame({ isWon, setIsWon }: SudokuGameProps) {
           onClick={() => {
             setBoard(INITIAL_BOARD.map((row) => [...row]));
             setErrors(Array(9).fill(null).map(() => Array(9).fill(false)));
+            setMoves(0);
             setIsWon(false);
           }}
           className="text-gray-500 hover:text-red-400 transition hover:underline active:scale-95"
