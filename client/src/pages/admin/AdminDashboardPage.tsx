@@ -25,6 +25,7 @@ interface AdminPlayerType {
     gameName: string;
     timeInMs: number;
     formattedTime: string;
+    moves?: number;
   }>;
   totalTimeTaken?: number;
   playerStartTime?: number;
@@ -850,14 +851,24 @@ export default function AdminDashboardPage() {
                               </td>
                               <td className="px-5 py-3.5 font-mono text-sm text-[#888]">
                                 {sudokuRes ? (
-                                  <span className="text-emerald-400">{sudokuRes.formattedTime}</span>
+                                  <span className="text-emerald-400">
+                                    {sudokuRes.formattedTime}
+                                    {sudokuRes.moves !== undefined && (
+                                      <span className="text-gray-500 ml-1 text-xs">({sudokuRes.moves})</span>
+                                    )}
+                                  </span>
                                 ) : (
                                   "—"
                                 )}
                               </td>
                               <td className="px-5 py-3.5 font-mono text-sm text-[#888]">
                                 {puzzleRes ? (
-                                  <span className="text-emerald-400">{puzzleRes.formattedTime}</span>
+                                  <span className="text-emerald-400">
+                                    {puzzleRes.formattedTime}
+                                    {puzzleRes.moves !== undefined && (
+                                      <span className="text-gray-500 ml-1 text-xs">({puzzleRes.moves})</span>
+                                    )}
+                                  </span>
                                 ) : (
                                   "—"
                                 )}
@@ -945,11 +956,25 @@ export default function AdminDashboardPage() {
                           <div className="grid grid-cols-3 gap-2 bg-[#0e0e0e] border border-[#1e1e1e] p-2.5 rounded-xl text-center font-mono text-xs">
                             <div>
                               <p className="text-[#555] text-[9px] uppercase">Sudoku</p>
-                              <p className="text-white mt-0.5">{sudokuRes ? sudokuRes.formattedTime : "—"}</p>
+                              <p className="text-white mt-0.5">
+                                {sudokuRes ? (
+                                  <>
+                                    {sudokuRes.formattedTime}
+                                    {sudokuRes.moves !== undefined && <span className="text-gray-500 ml-1 text-[10px]">({sudokuRes.moves})</span>}
+                                  </>
+                                ) : "—"}
+                              </p>
                             </div>
                             <div>
                               <p className="text-[#555] text-[9px] uppercase">15 Puzzle</p>
-                              <p className="text-white mt-0.5">{puzzleRes ? puzzleRes.formattedTime : "—"}</p>
+                              <p className="text-white mt-0.5">
+                                {puzzleRes ? (
+                                  <>
+                                    {puzzleRes.formattedTime}
+                                    {puzzleRes.moves !== undefined && <span className="text-gray-500 ml-1 text-[10px]">({puzzleRes.moves})</span>}
+                                  </>
+                                ) : "—"}
+                              </p>
                             </div>
                             <div>
                               <p className="text-[#555] text-[9px] uppercase font-bold">Total</p>

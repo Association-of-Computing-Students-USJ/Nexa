@@ -3,11 +3,12 @@ import React, { useState, useEffect } from "react";
 interface SlidingPuzzleProps {
   isWon: boolean;
   setIsWon: (isWon: boolean) => void;
+  setFinalMoves?: (moves: number) => void;
 }
 
 const GRID_SIZE = 4; // 4x4 grid for 15-Puzzle
 
-export default function SlidingPuzzle({ isWon, setIsWon }: SlidingPuzzleProps) {
+export default function SlidingPuzzle({ isWon, setIsWon, setFinalMoves }: SlidingPuzzleProps) {
   // Solved state: [1, 2, 3, ..., 15, 0] (0 is empty space)
   const SOLVED_STATE = Array.from({ length: GRID_SIZE * GRID_SIZE - 1 }, (_, i) => i + 1).concat(0);
 
@@ -109,10 +110,10 @@ export default function SlidingPuzzle({ isWon, setIsWon }: SlidingPuzzleProps) {
     setMoves((m) => m + 1);
 
     // check win condition
-    checkWin(newBoard);
+    checkWin(newBoard, moves + 1);
   };
 
-  const checkWin = (currentBoard: number[]) => {
+  const checkWin = (currentBoard: number[], currentMoves: number) => {
     let matchesSolved = true;
     for (let i = 0; i < currentBoard.length; i++) {
       if (currentBoard[i] !== SOLVED_STATE[i]) {
@@ -122,6 +123,7 @@ export default function SlidingPuzzle({ isWon, setIsWon }: SlidingPuzzleProps) {
     }
     if (matchesSolved) {
       setIsWon(true);
+      if (setFinalMoves) setFinalMoves(currentMoves);
     } else {
       setIsWon(false);
     }

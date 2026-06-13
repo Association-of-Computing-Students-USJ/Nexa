@@ -24,6 +24,7 @@ interface ArenaPlayer {
     gameName: string;
     timeInMs: number;
     formattedTime: string;
+    moves?: number;
   }>;
   totalTimeTaken?: number;
   playerStartTime?: number;
@@ -623,6 +624,9 @@ export default function AdminArenaPage() {
                         {sudokuRes ? (
                           <span className="text-emerald-400 font-semibold">
                             {sudokuRes.formattedTime}
+                            {sudokuRes.moves !== undefined && (
+                              <span className="text-gray-500 ml-1 text-xs">({sudokuRes.moves})</span>
+                            )}
                           </span>
                         ) : (
                           <span className="text-[#333]">—</span>
@@ -634,6 +638,9 @@ export default function AdminArenaPage() {
                         {puzzleRes ? (
                           <span className="text-emerald-400 font-semibold">
                             {puzzleRes.formattedTime}
+                            {puzzleRes.moves !== undefined && (
+                              <span className="text-gray-500 ml-1 text-xs">({puzzleRes.moves})</span>
+                            )}
                           </span>
                         ) : (
                           <span className="text-[#333]">—</span>
